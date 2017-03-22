@@ -1,51 +1,35 @@
 module.exports = () => {
 
-  let domains    = [],
-      filter     = require('./filter'),
-      aliases    = {},
-      middleware = {
-        before  : {},
-        after   : {},
-        noMatch : {}
+  let extensions = {},
+      middlewares = {
+        before  : [],
+        after   : [],
+        noMatch : []
       };
 
-  function filter(functionName, domain, id) {
-    let middle = [], before = [], after = [];
-
-    if (middleware.before[domain]) {
-      before = middleware.before[domain];
-    }
-
-    if (
-      middleware[functionName] &&
-      middleware[functionName][domain] &&
-      middleware[functionName][domain][id]
-    ) {
-      middle = middleware[functionName][domain][id];
-    } else if (middleware.noMatch[domain]) {
-      middle = middleware.noMatch[domain];
+  function filter(method, path) {
+    if (middleware[method] && middleware[method][path]) {
+      return [...middleware.before, ...middleware[method][path], ...midleware.after];
+    } else if (middleware.noMatch.length > 0) {
+      return [...middleware.before, ...middleware.noMatch, ...midleware.after];
     } else {
-      console.warn(`
-        Could not find a route for ${ functionName } - ${ domain } - ${ id }
-        and no fallback noMatch defined either
-      `);
+      console.warn(`Could not find a route for ${ method } - ${ path } and no fallback noMatch defined either`);
     }
-
-    if (middleware.after[domain]) {
-      after = middleware.after[domain];
-    }
-
-    return [...before, ...middle, ...after];
   }
 
-  // Can be called by any extension to initiate an update process
-  function update(functionName, domain, id, ...parameters) {
-    const stack = filter(functionName, domain, id);
-    let relays  = {};
+  function getAlias(extension, method) {
+    if (aliases[extension] && aliases[extension][method]) {
+      return aliases[extension][method];
+    }
+    return method;
+  }
 
-    function thunkify(middleware) {
+  function update(extension, method, path) {
+    const stack = filter(getAlias(extension, method), path);
+    let relay   = extensions;
 
-      if (!middleware) {
+    function thunkify(hook) {
+      if (!hook) {
         return function last() {};
       }
 
@@ -53,7 +37,7 @@ module.exports = () => {
         if (typeof data !== 'object') {
           throw new Error(`Relay data needs to be an object, ${ typeof data } given. Value: ${ data }`);
         }
-        relays = Object.assign({}, relay, data);
+        relay = Object.assign({}, relay, data);
 
         if (hook.callback) {
           hook.callback(thunkify(stack.shift()), relay, ...parameters);
@@ -63,76 +47,55 @@ module.exports = () => {
     thunkify(stack.shift())();
   }
 
-  function register(extensionName, methodName) {
-    // Check if there is an alias
-    if (aliases[extensionName] && aliases[extensionName][methodName]) {
-      methodName = aliases[extensionName][methodName];
-    }
-    if (middleware[methodName]) {
-      throw new Error(
-        `Method ${ methodName } for extension ${ extensionName } has already
-        been registed, please provide an alias.
-      `);
-    }
-    exposed[methodName] = (domain, id, callback) => {
-      if (!middleware[methodName]) {
-        middleware[methodName] = {};
-      }
-      if (!middleware[methodName][domain]) {
-        middleware[methodName][domain] = {};
-      }
-      if (middleware[methodName][domain][id]) {
-        middleware[methodName][domain][id] = [];
-      }
-      middleware[methodName][domain][id].push(callback);
-    }
+  function expose(extension, methods) => {
+    methods = methods
+      .map(method => getAlias(extension, method))
+      .forEach(method => {
+        if (exposed[method]) {
+          throw new Error(`${ extension } tries to add method ${ method } which already exists, please add an alias`);
+        }
+        middleware[method] = {};
+        exposed[method] = (path = '*', callback) => {
+          if (middleware[method][path]) {
+            middleware[method][path] = [];
+          }
+          middleware[method][path].push(callback);
+        }
+      });
   }
 
   let exposed = {
-    alias(extensionName, currentName, newName) {
-      if (!aliases[extensionName]) {
+    alias(extensionName, methodName, newMethodName) {
+      if (aliases[extensionName] && aliases[extensionName][methodName]) {
+        throw new Error(`
+          There is already an alias defined for extension ${ extensionName }
+          with the method ${ methodName }
+        `);
+      } else if (!aliases[extensionName]) {
         aliases[extensionName] = {};
       }
-      if (aliases[extensionName][currentName] || middleware[newName]) {
-        throw new Error(`Cannot define alias '${ newName }', alias name is already defined`);
-      }
-      aliases[extensionName][currentName] = newName;
+      aliases[extensionName][methodName] = newMethodName;
     },
     extension(name, extension) {
+      if (typeof name !== 'string') {
+        throw new Error('Name needs to be a string');
+      }
       if (typeof extension !== 'function') {
         throw new Error('Extension needs to be of type function');
       }
-      extension(update, register);
+      extensions[name] = extension(expose, update);
       return exposed;
     },
-    before(domainName, callback, excludes = []) {
-      if (!middleware.before[domainName]) {
-        middleware.before[domainName] = [];
-      }
-      middleware.before[domainName].push({
-        callback,
-        excludes
-      });
+    before(callback, ...excludes) {
+      middleware.before.push({ callback, excludes });
       return exposed;
     },
-    after(domainName, callback, excludes = []) {
-      if (!middleware.after[domainName]) {
-        middleware.after[domainName] = [];
-      }
-      middleware.after[domainName].push({
-        callback,
-        excludes
-      });
+    after(callback, ...excludes) {
+      middleware.after.push({ callback, excludes });
       return exposed;
     },
-    noMatch(domainName, callback, excludes = []) {
-      if (!middleware.noMatch[domainName]) {
-        middleware.noMatch[domainName] = [];
-      }
-      middleware.noMatch[domainName].push({
-        callback,
-        excludes
-      });
+    noMatch(callback, ...excludes) {
+      middleware.noMatch.push({ callback, excludes });
       return exposed;
     }
   }

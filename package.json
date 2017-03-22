@@ -15,5 +15,9 @@
   "bugs": {
     "url": "https://github.com/braadworst/lg-core/issues"
   },
+  "keywords": [
+    "core",
+    "lagoon-road"
+  ],
   "homepage": "https://github.com/braadworst/lg-core#readme"
 }
