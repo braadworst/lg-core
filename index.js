@@ -1,16 +1,15 @@
 module.exports = () => {
 
-  // The events that trigger updates on the road
-  const events  = [
-    'dom',
-    'data',
-    'path'
-  ];
+  let selected, environments = {}, middlewares = {}, extensions = {};
 
-  let selected, environments = {}, middlewares = {};
+  function update(eventName, name, ...parameters) {
+    shouldExist(environments, environment);
+    const middleware = environments[environment].middleware;
+    const names      = environments[environment].pathsByPath(name);
+  }
 
-  function getPaths(domain) {
-    road[domain]
+  function handle(name, middleware, ...parameters) {
+
   }
 
   function loop(callback) {
@@ -48,16 +47,68 @@ module.exports = () => {
     }
   }
 
+  function isObject(value) {
+    if (typeof value !== 'object') {
+      throw new Error('Supplied value should be of type object');
+    }
+  }
+
   const exposed = {
-    environments(...defined) {
-      hasLength(defined).forEach(record => {
-        isString(record);
-        environments[record] = {
-          middleware  : {},
-          pathsByName : {},
-          pathsByPath : {},
+    environment(name) {
+      shouldNotExist(environments, name);
+      isString(name);
+      environments[name] = {
+        middleware  : [],
+        pathsByName : {},
+        pathsByPath : {},
+      }
+      return exposed;
+    },
+    extension(name, extension) {
+      isString(name);
+      extensions[name] = extension;
+      return exposed;
+    },
+    middleware(defined = {}) {
+      isObject(defined);
+      Object.keys(defined).forEach(key => shouldNotExist(middlewares, key));
+      middlewares = Object.assign({}, middlewares, defined);
+    },
+    method(extension, ...methods) {
+      isString(extension);
+      methods.forEach(isString);
+      if (extensions[extension] && typeof extensions[extension] === 'function') {
+        extensions[extension](update, name);
+      }
+      methods.forEach(method => {
+        shouldNotExist(exposed, method);
+        exposed[method] = (name, middleware, ...parameters) => {
+          shouldExist(middlewares, middleware);
+          let names;
+          if (name[0] === '-') {
+            name = name.slice(1);
+            shouldExist(environment.pathsByName, name);
+            names = Object.clone({}, environment.pathsByName);
+            delete names[name];
+            names = Object.keys(names).filter(key => names[key].length === 1).map(key => names[key]);
+          } else {
+            shouldExist(environment.pathsByName, name);
+            names = [name];
+          }
+
+          loop(environment => {
+            names.forEach(name => {
+              // We have real middleware apply it otherwise use dummy
+              let callback = next => { next(); };
+              if (middlewares[middleware]) {
+                callback = parameters ? middlewares[middleware](parameters) : middlewares[middleware];
+              }
+              environment.middlewares.push({ method, name, callback });
+            });
+          });
         }
       });
+
       return exposed;
     },
     where(...defined) {
@@ -85,36 +136,11 @@ module.exports = () => {
           return [...reduced, ...environment.pathsByName[record]];
         }, [])
         environment.pathsByName[name].forEach(path => {
+          shouldExist(environment.pathsByPath, path);
           environment.pathsByPath[path].push(name);
         });
       });
     },
-    handle(name, middlware, ...parameters) {
-      isString(name);
-      isString(middleware);
-      shouldExist(middlewares, middleware);
-      const inverse = name[0] === '-';
-      name          = inverse ? name.slice(1) : name;
-
-      loop(environment => {
-        shouldExist(environment.pathsByName, name);
-        let names = [name];
-        if (inverse) {
-          names = Object.clone({}, environment.pathsByName);
-          delete names[name];
-        }
-
-        Object
-          .keys(names)
-          .forEach(name => {
-            // No path groups
-            if (names[name].length < 2) {
-              const callback = middlewares(middleware);
-              environment.middleware[name] = parameters.length > 0 ? callback(parameters) : callback;
-            }
-          });
-      });
-    }
   }
 
   return exposed;
