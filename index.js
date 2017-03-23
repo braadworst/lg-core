@@ -1,102 +1,119 @@
 module.exports = () => {
 
-  let extensions = {},
-      middlewares = {
-        before  : [],
-        after   : [],
-        noMatch : []
-      };
+  // The events that trigger updates on the road
+  const events  = [
+    'dom',
+    'data',
+    'path'
+  ];
 
-  function filter(method, path) {
-    if (middleware[method] && middleware[method][path]) {
-      return [...middleware.before, ...middleware[method][path], ...midleware.after];
-    } else if (middleware.noMatch.length > 0) {
-      return [...middleware.before, ...middleware.noMatch, ...midleware.after];
-    } else {
-      console.warn(`Could not find a route for ${ method } - ${ path } and no fallback noMatch defined either`);
+  let selected, environments = {}, middlewares = {};
+
+  function getPaths(domain) {
+    road[domain]
+  }
+
+  function loop(callback) {
+    selected.forEach(environment => {
+      callback(environments[environment]);
+    });
+  }
+
+  function isString(value) {
+    if (typeof value !== 'string') {
+      throw new Error(`Supplied argument needs to be a string, got type ${ typeof value }, ${ value }`);
+    }
+    if (value.length === 0) {
+      throw new Error('Supplied argument is an empty string');
+    }
+    return value;
+  }
+
+  function hasLength(array, length = 1) {
+    if (array.length < length) {
+      throw new Error('Please supply all needed arguments');
+    }
+    return array;
+  }
+
+  function shouldExist(object, key) {
+    if (!object[key]) {
+      throw new Error(`${ key } has not been defined`);
     }
   }
 
-  function getAlias(extension, method) {
-    if (aliases[extension] && aliases[extension][method]) {
-      return aliases[extension][method];
+  function shouldNotExist(object, key) {
+    if (object[key]) {
+      throw new Error(`${ key } has already been defined`);
     }
-    return method;
   }
 
-  function update(extension, method, path) {
-    const stack = filter(getAlias(extension, method), path);
-    let relay   = extensions;
-
-    function thunkify(hook) {
-      if (!hook) {
-        return function last() {};
-      }
-
-      return function(data = {}) {
-        if (typeof data !== 'object') {
-          throw new Error(`Relay data needs to be an object, ${ typeof data } given. Value: ${ data }`);
-        }
-        relay = Object.assign({}, relay, data);
-
-        if (hook.callback) {
-          hook.callback(thunkify(stack.shift()), relay, ...parameters);
-        }
-      }
-    }
-    thunkify(stack.shift())();
-  }
-
-  function expose(extension, methods) => {
-    methods = methods
-      .map(method => getAlias(extension, method))
-      .forEach(method => {
-        if (exposed[method]) {
-          throw new Error(`${ extension } tries to add method ${ method } which already exists, please add an alias`);
-        }
-        middleware[method] = {};
-        exposed[method] = (path = '*', callback) => {
-          if (middleware[method][path]) {
-            middleware[method][path] = [];
-          }
-          middleware[method][path].push(callback);
+  const exposed = {
+    environments(...defined) {
+      hasLength(defined).forEach(record => {
+        isString(record);
+        environments[record] = {
+          middleware  : {},
+          pathsByName : {},
+          pathsByPath : {},
         }
       });
-  }
+      return exposed;
+    },
+    where(...defined) {
+      hasLength(defined).forEach(isString);
+      selected = defined;
+      return exposed;
+    },
+    path(name, path) {
+      isString(name);
+      isString(path);
+      loop(environment => {
+        shouldNotExist(environment.pathsByPath, path);
+        shouldNotExist(environment.pathsByName, name);
+        environment.pathsByPath[path] = [name];
+        environment.pathsByName[name] = [path];
+      });
+      return exposed;
+    },
+    pathGroup(name, ...names) {
+      loop(environment => {
+        isString(name);
+        hasLength(names, 2).forEach(isString);
+        shouldNotExist(environment.pathsByName, name);
+        environment.pathsByName[name] = names.reduce((reduced, record) => {
+          return [...reduced, ...environment.pathsByName[record]];
+        }, [])
+        environment.pathsByName[name].forEach(path => {
+          environment.pathsByPath[path].push(name);
+        });
+      });
+    },
+    handle(name, middlware, ...parameters) {
+      isString(name);
+      isString(middleware);
+      shouldExist(middlewares, middleware);
+      const inverse = name[0] === '-';
+      name          = inverse ? name.slice(1) : name;
 
-  let exposed = {
-    alias(extensionName, methodName, newMethodName) {
-      if (aliases[extensionName] && aliases[extensionName][methodName]) {
-        throw new Error(`
-          There is already an alias defined for extension ${ extensionName }
-          with the method ${ methodName }
-        `);
-      } else if (!aliases[extensionName]) {
-        aliases[extensionName] = {};
-      }
-      aliases[extensionName][methodName] = newMethodName;
-    },
-    extension(name, extension) {
-      if (typeof name !== 'string') {
-        throw new Error('Name needs to be a string');
-      }
-      if (typeof extension !== 'function') {
-        throw new Error('Extension needs to be of type function');
-      }
-      extensions[name] = extension(expose, update);
-      return exposed;
-    },
-    before(callback, ...excludes) {
-      middleware.before.push({ callback, excludes });
-      return exposed;
-    },
-    after(callback, ...excludes) {
-      middleware.after.push({ callback, excludes });
-      return exposed;
-    },
-    noMatch(callback, ...excludes) {
-      middleware.noMatch.push({ callback, excludes });
-      return exposed;
+      loop(environment => {
+        shouldExist(environment.pathsByName, name);
+        let names = [name];
+        if (inverse) {
+          names = Object.clone({}, environment.pathsByName);
+          delete names[name];
+        }
+
+        Object
+          .keys(names)
+          .forEach(name => {
+            // No path groups
+            if (names[name].length < 2) {
+              const callback = middlewares(middleware);
+              environment.middleware[name] = parameters.length > 0 ? callback(parameters) : callback;
+            }
+          });
+      });
     }
   }
 
