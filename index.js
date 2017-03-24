@@ -37,7 +37,11 @@ module.exports = () => {
             }
           }
 
-          thunkify(stack.shift())(extensions);
+          try {
+            thunkify(stack.shift())(extensions);
+          } catch (error) {
+            console.log('road had an error');
+          }
         }
       });
     }
@@ -45,7 +49,44 @@ module.exports = () => {
 
   function loop(callback) {
     selected.forEach(environment => {
-      callback(environments[environment]);
+      if (environments[environment]) {
+        callback(environments[environment]);
+      }
+    });
+  }
+
+  function general(middleware, method, parameters) {
+    check.assert.nonEmptyString(middleware, 'Provided middleware name needs to be a string');
+    loop(environment => {
+      if (middlewares[middlware]) {
+        let callback = middlewares[middleware];
+        callback = parameters.length ? callback(parameters) : callback;
+        environment.middleware.push({ method, '*', callback });
+      }
+    });
+  }
+
+  function specific(name, middleware, parameters, method, once = false) {
+    check.assert.nonEmptyString(name, 'Provided path alias needs to be a string');
+    check.assert.nonEmptyString(middleware, 'Provided middleware name needs to be a string');
+    check.assert.not.equal(name, '-' `Path alias cannot be "-"`);
+    loop(environment => {
+      if (middlewares[middleware]) {
+        let names;
+        if (name[0] === '-') {
+          name = name.slice(1);
+          check.assert.assigned(environment.pathsByName[name], `${ name } has not been defined as a path alias`);
+          names = Object.clone({}, environment.pathsByName);
+          delete names[name];
+          names = Object.keys(names).filter(key => names[key].length === 1).map(key => names[key]);
+        } else {
+          check.assert.assigned(environment.pathsByName[name], `${ name } has not been defined as a path alias`);
+          names = [name];
+        }
+        let callback = middlewares[middleware];
+        callback = parameters.length ? callback(parameters) : callback;
+        environment.middleware.push({ method, names, callback, once });
+      }
     });
   }
 
@@ -55,9 +96,29 @@ module.exports = () => {
       check.assert.nonEmptyString(name, 'Provided environment needs to be a string');
       environments[name] = {
         middleware  : [],
-        pathsByName : {},
+        pathsByName : {
+          '*' : []
+        },
         pathsByPath : {},
       }
+      return exposed;
+    },
+    run(name, middleware, ...parameters) {
+      specific(name, middleware, parameters, 'get');
+    },
+    once(name, middleware, ...parameters) {
+    specific(name, middleware, parameters, 'get', true);
+    },
+    error(middleware, ...parameters) {
+      general(middleware, 'error', ..parameters);
+      return exposed;
+    },
+    notFound(middleware, ...parameters) {
+      general(middleware, 'notFound', ..parameters);
+      return exposed;
+    },
+    stop(middleware, ...parameters) {
+      general(middleware, 'stop', ..parameters);
       return exposed;
     },
     extension(name, extension) {
@@ -73,59 +134,9 @@ module.exports = () => {
       });
       middlewares = Object.assign({}, middlewares, defined);
     },
-    listener(method, ...listeners) {
-      check.assert.nonEmptyString(method, 'Provided listener method needs to be a string');
-      check.assert.hasLength(listeners, 1, 'Please add at least one listener method');
-      check.assert.array.of.nonEmptyString(listeners, 'All listener methods need to be a string');
-      check.assert.assigned(exposed[method], `${ method } has not been defined as an event method`);
-      listeners.forEach(listener => {
-        check.assert.assigned(exposed[listener], `${ listener } has not been defined as an event method`);
-      });
-      listeners[method] = [...listeners[method], ...listeners];
-      return exposed;
-    },
-    events(extension, ...methods) {
-      check.assert.nonEmptyString(extension, 'Provided extension needs to be a string');
-      check.assert.hasLength(methods, 1, 'Please add at least one event method name');
-      check.assert.array.of.nonEmptyString(methods, 'All event method names need to be a string');
-      if (extensions[extension] && typeof extensions[extension] === 'function') {
-        extensions[extension](update, { environments : selected });
-      }
-      methods.forEach(method => {
-        check.assert.not.assigned(exposed[method], `${ method } has already been defined as an event method`);
-        listeners[method] = [method];
-        exposed[method] = (name, middleware, ...parameters) => {
-          check.assert.nonEmptyString(name, 'Provided path alias needs to be a string');
-          check.assert.nonEmptyString(middleware, 'Provided middleware name needs to be a string');
-          check.assert.not.equal(name, '-' `Path alias cannot be "-"`);
-          loop(environment => {
-            if (middlewares[middleware]) {
-              let names;
-              if (name[0] === '-') {
-                name = name.slice(1);
-                check.assert.assigned(environment.pathsByName[name], `${ name } has not been defined as a path alias`);
-                names = Object.clone({}, environment.pathsByName);
-                delete names[name];
-                names = Object.keys(names).filter(key => names[key].length === 1).map(key => names[key]);
-              } else {
-                check.assert.assigned(environment.pathsByName[name], `${ name } has not been defined as a path alias`);
-                names = [name];
-              }
-              let callback = middlewares[middleware];
-              callback = parameters ? callback(parameters) : callback;
-              environment.middleware.push({ method, names, callback });
-            }
-          });
-        }
-      });
-      return exposed;
-    },
     where(...defined) {
       check.assert.hasLength(defined, 1, 'Please provide at least one environment name');
       check.assert.array.of.nonEmptyString(defined, 'All supplied environment names need to be a string');
-      defined.forEach(environment => {
-        check.assert.assigned(environments[environment], `${ environment } has not been defined as a environment name`);
-      });
       selected = defined;
       return exposed;
     },
@@ -138,6 +149,7 @@ module.exports = () => {
         check.assert.not.assigned(environment.pathsByName[name], `${ name } has already been defined`);
         environment.pathsByPath[path] = [name];
         environment.pathsByName[name] = [path];
+        environment.pathsByName['*'].push(path);
       });
       return exposed;
     },
@@ -158,6 +170,33 @@ module.exports = () => {
         });
       });
     },
+    // listener(method, ...listeners) {
+    //   check.assert.nonEmptyString(method, 'Provided listener method needs to be a string');
+    //   check.assert.hasLength(listeners, 1, 'Please add at least one listener method');
+    //   check.assert.array.of.nonEmptyString(listeners, 'All listener methods need to be a string');
+    //   check.assert.assigned(exposed[method], `${ method } has not been defined as an event method`);
+    //   listeners.forEach(listener => {
+    //     check.assert.assigned(exposed[listener], `${ listener } has not been defined as an event method`);
+    //   });
+    //   listeners[method] = [...listeners[method], ...listeners];
+    //   return exposed;
+    // },
+    // events(extension, ...methods) {
+    //   check.assert.nonEmptyString(extension, 'Provided extension needs to be a string');
+    //   check.assert.hasLength(methods, 1, 'Please add at least one event method name');
+    //   check.assert.array.of.nonEmptyString(methods, 'All event method names need to be a string');
+    //   if (extensions[extension] && typeof extensions[extension] === 'function') {
+    //     extensions[extension](update, { environments : selected });
+    //   }
+    //   methods.forEach(method => {
+    //     check.assert.not.assigned(exposed[method], `${ method } has already been defined as an event method`);
+    //     listeners[method] = [method];
+    //     exposed[method] = (name, middleware, ...parameters) => {
+    //       specific(name, middleware, parameters);
+    //     }
+    //   });
+    //   return exposed;
+    // },
   }
   return exposed;
 }
