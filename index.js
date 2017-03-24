@@ -1,15 +1,41 @@
 module.exports = () => {
+  let selected, environments = {}, middlewares = {}, extensions = {}, listeners = {};
 
-  let selected, environments = {}, middlewares = {}, extensions = {};
+  function update(options, ...parameters) {
+    shouldExist(options, 'environments');
+    shouldExist(options, 'method');
+    shouldExist(exposed, options.method);
+    shouldExist(options, 'path');
+    isString(options.method);
+    isString(options.path);
+    selectedEnvironments.forEach(isString);
+    options.environments.forEach(environment => shouldExist(environments, environment));
+    options.environments.forEach(environment => {
+      const middleware = environments[environment].middleware;
+      const names = name[0] === '/' ? environments[environment].pathsByPath[options.path] : [options.path];
+      const stack = middleware
+        .filter(record => listeners[options.method].indexOf(record.method) > -1)
+        .filter(record => record.names.filter(name => names.indexOf(name) > -1).length > 0);
 
-  function update(eventName, name, ...parameters) {
-    shouldExist(environments, environment);
-    const middleware = environments[environment].middleware;
-    const names      = environments[environment].pathsByPath(name);
-  }
+      let relay = {};
+      function thunkify(middleware) {
+        if (!middleware) { return function last() {}; }
+        if (typeof middleware.callback !== 'function') {
+          throw new Error('Middleware needs to be a function');
+        }
+        return function(defined) {
+          isObject(defined);
+          relay = Object.assign({}, relay, defined)
+          middleware.callback(
+            ...parameters,
+            thunkify(stack.shift()),
+            relay
+          );
+        }
+      }
 
-  function handle(name, middleware, ...parameters) {
-
+      thunkify(stack.shift())(extensions);
+    });
   }
 
   function loop(callback) {
@@ -74,16 +100,23 @@ module.exports = () => {
       Object.keys(defined).forEach(key => shouldNotExist(middlewares, key));
       middlewares = Object.assign({}, middlewares, defined);
     },
-    method(extension, ...methods) {
+    listener(method, ...listeners) {
+      isString(method);
+      hasLength(listeners).forEach(isString).forEach(method => shouldExist(exposed, method));
+      shouldExist(listeners, method);
+      listeners[method] = [...listeners[method], ...listeners];
+      return exposed;
+    },
+    events(extension, ...methods) {
       isString(extension);
-      methods.forEach(isString);
+      hasLength(methods).forEach(isString);
       if (extensions[extension] && typeof extensions[extension] === 'function') {
-        extensions[extension](update, name);
+        extensions[extension](update, { environments : selected });
       }
       methods.forEach(method => {
         shouldNotExist(exposed, method);
+        listeners[method] = [method];
         exposed[method] = (name, middleware, ...parameters) => {
-          shouldExist(middlewares, middleware);
           let names;
           if (name[0] === '-') {
             name = name.slice(1);
@@ -97,14 +130,11 @@ module.exports = () => {
           }
 
           loop(environment => {
-            names.forEach(name => {
-              // We have real middleware apply it otherwise use dummy
-              let callback = next => { next(); };
-              if (middlewares[middleware]) {
-                callback = parameters ? middlewares[middleware](parameters) : middlewares[middleware];
-              }
-              environment.middlewares.push({ method, name, callback });
-            });
+            if (middlewares[middleware]) {
+              let callback = middlewares[middleware];
+              callback = parameters ? callback(parameters) : callback;
+              environment.middleware.push({ method, names, callback });
+            }
           });
         }
       });
@@ -128,9 +158,9 @@ module.exports = () => {
       return exposed;
     },
     pathGroup(name, ...names) {
+      isString(name);
+      hasLength(names, 2).forEach(isString);
       loop(environment => {
-        isString(name);
-        hasLength(names, 2).forEach(isString);
         shouldNotExist(environment.pathsByName, name);
         environment.pathsByName[name] = names.reduce((reduced, record) => {
           return [...reduced, ...environment.pathsByName[record]];
