@@ -27,9 +27,9 @@ module.exports = () => {
           isObject(defined);
           relay = Object.assign({}, relay, defined)
           middleware.callback(
-            ...parameters,
             thunkify(stack.shift()),
-            relay
+            relay,
+            ...parameters
           );
         }
       }
