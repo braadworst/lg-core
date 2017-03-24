@@ -19,5 +19,8 @@
     "core",
     "lagoon-road"
   ],
-  "homepage": "https://github.com/braadworst/lg-core#readme"
+  "homepage": "https://github.com/braadworst/lg-core#readme",
+  "dependencies": {
+    "check-types": "^7.1.5"
+  }
 }
