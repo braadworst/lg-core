@@ -1,5 +1,5 @@
 {
-  "name": "lg-core",
+  "name": "lr-core",
   "version": "0.0.1",
   "description": "The core for everything lagoon-road",
   "main": "index.js",
@@ -21,6 +21,7 @@
   ],
   "homepage": "https://github.com/braadworst/lg-core#readme",
   "dependencies": {
-    "check-types": "^7.1.5"
+    "check-types": "^7.1.5",
+    "flat": "^2.0.1"
   }
 }
