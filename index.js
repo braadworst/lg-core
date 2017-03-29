@@ -20,11 +20,13 @@ module.exports = environmentId => {
     done
   };
 
+  const stringPattern = /^[a-z0-9]+$/i;
+
   environment(environmentId);
 
   function environment(id) {
     check.assert.not.undefined(id, 'Environment id cannot be empty');
-    check.assert.match(id, /^[a-zA-Z0-9]*$/, 'Environment id needs to be a string containing only letters and or numbers');
+    check.assert.match(id, stringPattern, 'Environment id needs to be a string containing only letters and or numbers');
     check.assert.not.assigned(environments[id], `${ id } has already be defined as an environment`);
     environments[id] = { paths : {}, noMatch : [], error : [], done : [] };
     return exposed;
@@ -33,7 +35,7 @@ module.exports = environmentId => {
   function extension(id, extension, isUpdater = false) {
     check.assert.not.undefined(id, 'Extension id cannot be empty');
     check.assert.not.undefined(extension, 'Extension cannot be empty');
-    check.assert.match(id, /^[a-zA-Z0-9]*$/, 'Extension id needs to be a string containing only letters and or numbers');
+    check.assert.match(id, stringPattern, 'Extension id needs to be a string containing only letters and or numbers');
     check.assert.not.assigned(extensions[id], `${ id } has already be defined as an extension`);
     extensions[id] = isUpdater ? extension(update, { environments : environmentsInUse }) : extension;
     return exposed;
@@ -53,8 +55,9 @@ module.exports = environmentId => {
   function where(...environmentIds) {
     check.assert.greater(environmentIds.length, 0, 'Where method missing parameters');
     environmentIds.forEach(id => {
-      check.assert.match(id, /^[a-zA-Z0-9]*$/, 'Environment id needs to be a string containing only letters and or numbers');
-      check.assert.assigned(environments[id]);
+      check.assert.not.undefined(id, 'Environment id cannot be empty');
+      check.assert.match(id, stringPattern, 'Environment id needs to be a string containing only letters and or numbers');
+      check.assert.assigned(environments[id], `Environment "${ id }" doesn't exist`);
     });
     environmentsInUse = environmentIds.forEach(id => environments[id]);
     return exposed;
@@ -63,9 +66,9 @@ module.exports = environmentId => {
   function path(id, ...values) {
     check.assert.not.undefined(id, 'Path id cannot be empty');
     check.assert.greater(values.length, 0, 'Please provide at least one value for your path');
-    check.assert.match(id, /^[a-zA-Z0-9]*$/, 'Path id needs to be a string containing only letters and or numbers');
+    check.assert.match(id, stringPattern, 'Path id needs to be a string containing only letters and or numbers');
     values.forEach(value => {
-      check.assert.match(value, /^[a-zA-Z0-9]*$/, 'Path id needs to be a string containing only letters and or numbers');
+      check.assert.match(value, stringPattern, 'Path id needs to be a string containing only letters and or numbers');
     });
     environmentsInUse.forEach(environment => {
       check.assert.not.assigned(environment.paths[id], `${ id } has already been defined`);
@@ -95,19 +98,19 @@ module.exports = environmentId => {
 
   function error(middlewareId) {
     check.assert.not.undefined(middlewareId, 'Middleware id cannot be empty');
-    check.assert.match(middlewareId, /^[a-zA-Z0-9]*$/, 'Middleware id needs to be a string containing only letters and or numbers');
+    check.assert.match(middlewareId, stringPattern, 'Middleware id needs to be a string containing only letters and or numbers');
     environmentsInUse.forEach(environment => environment.error.push(middlewareId));
   }
 
   function noMatch(middlewareId) {
     check.assert.not.undefined(middlewareId, 'Middleware id cannot be empty');
-    check.assert.match(middlewareId, /^[a-zA-Z0-9]*$/, 'Middleware id needs to be a string containing only letters and or numbers');
+    check.assert.match(middlewareId, stringPattern, 'Middleware id needs to be a string containing only letters and or numbers');
     environmentsInUse.forEach(environment => environment.noMatch.push(middlewareId));
   }
 
   function done(middlewareId) {
     check.assert.not.undefined(middlewareId, 'Middleware id cannot be empty');
-    check.assert.match(middlewareId, /^[a-zA-Z0-9]*$/, 'Middleware id needs to be a string containing only letters and or numbers');
+    check.assert.match(middlewareId, stringPattern, 'Middleware id needs to be a string containing only letters and or numbers');
     environmentsInUse.forEach(environment => environment.done.push(middlewareId));
   }
 
@@ -115,9 +118,9 @@ module.exports = environmentId => {
     check.assert.not.undefined(pathId, 'Path id cannot be empty');
     check.assert.not.undefined(middlewareId, 'Middleware id cannot be empty');
     check.assert.not.undefined(updateType, 'Update type cannot be empty');
-    check.assert.match(pathId, /^[a-zA-Z0-9]*$/, 'Path id needs to be a string containing only letters and or numbers');
-    check.assert.match(middlewareId, /^[a-zA-Z0-9]*$/, 'Middleware id needs to be a string containing only letters and or numbers');
-    check.assert.match(updateType, /^[a-zA-Z0-9]*$/, 'Update type needs to be a string containing only letters and or numbers');
+    check.assert.match(pathId, stringPattern, 'Path id needs to be a string containing only letters and or numbers');
+    check.assert.match(middlewareId, stringPattern, 'Middleware id needs to be a string containing only letters and or numbers');
+    check.assert.match(updateType, stringPattern, 'Update type needs to be a string containing only letters and or numbers');
     if (pathId.indexOf('*') > -1) {
       check.assert.equal(pathId.length, 1, 'Path id needs to be * only or a path id not both');
     }

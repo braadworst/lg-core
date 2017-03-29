@@ -39,6 +39,10 @@ tape('Empty throws: path', test => {
     const road = core('client');
     road.path();
   }, /Path id cannot be empty/);
+  test.throws(() => {
+    const road = core('client');
+    road.path('pathId');
+  }, /Please provide at least one value for your path/);
   test.end();
 });
 
