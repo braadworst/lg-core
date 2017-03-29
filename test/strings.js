@@ -41,7 +41,7 @@ tape('String patters throws: path', test => {
   fails.forEach(fail => {
     test.throws(() => {
       const road = core('client');
-      road.path('ok', fail);
+      road.path(fail, 'ok');
     }, /Path id needs to be a string containing only letters and or numbers/);
   });
   test.end();

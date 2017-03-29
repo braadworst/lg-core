@@ -27,8 +27,8 @@ module.exports = environmentId => {
   function environment(id) {
     check.assert.not.undefined(id, 'Environment id cannot be empty');
     check.assert.match(id, stringPattern, 'Environment id needs to be a string containing only letters and or numbers');
-    check.assert.not.assigned(environments[id], `${ id } has already be defined as an environment`);
     environments[id] = { paths : {}, noMatch : [], error : [], done : [] };
+    environmentsInUse = [environments[id]];
     return exposed;
   }
 
@@ -36,7 +36,7 @@ module.exports = environmentId => {
     check.assert.not.undefined(id, 'Extension id cannot be empty');
     check.assert.not.undefined(extension, 'Extension cannot be empty');
     check.assert.match(id, stringPattern, 'Extension id needs to be a string containing only letters and or numbers');
-    check.assert.not.assigned(extensions[id], `${ id } has already be defined as an extension`);
+    check.assert.not.assigned(extensions[id], `"${ id }" has already been defined as an extension`);
     extensions[id] = isUpdater ? extension(update, { environments : environmentsInUse }) : extension;
     return exposed;
   }
@@ -46,7 +46,7 @@ module.exports = environmentId => {
     check.assert.nonEmptyObject(newMiddleware, 'Provided middleware needs to be a non empty object');
     newMiddleware = flat(newMiddleware);
     Object.keys(newMiddleware).forEach(id => {
-      check.assert.not.assigned(availableMiddleware[id], `${ id } has already be defined as middleware`);
+      check.assert.not.assigned(availableMiddleware[id], `"${ id }" has already been defined as middleware`);
     });
     availableMiddleware = Object.assign({}, availableMiddleware, newMiddleware);
     return exposed;
@@ -67,11 +67,9 @@ module.exports = environmentId => {
     check.assert.not.undefined(id, 'Path id cannot be empty');
     check.assert.greater(values.length, 0, 'Please provide at least one value for your path');
     check.assert.match(id, stringPattern, 'Path id needs to be a string containing only letters and or numbers');
-    values.forEach(value => {
-      check.assert.match(value, stringPattern, 'Path id needs to be a string containing only letters and or numbers');
-    });
+    check.assert.array.of.string(values, 'All path values need to be strings');
     environmentsInUse.forEach(environment => {
-      check.assert.not.assigned(environment.paths[id], `${ id } has already been defined`);
+      check.assert.not.assigned(environment.paths[id], `Path id "${ id }" has already been defined`);
       environment.paths[id] = { values : [], middleware : [], once : false, type : 'default' };
       environment.paths[id].values = values.reduce((reduced, value) => {
         const group = environment[value] ? environment[value].values : [value];
@@ -138,12 +136,12 @@ module.exports = environmentId => {
         asArray.forEach(set);
       } else if (pathId[0] === '-') {
         pathId = pathId.slice(1);
-        check.assert.assigned(environment.paths[pathId], `Path ${ pathId } not found`);
+        check.assert.assigned(environment.paths[pathId], `Path id "${ pathId }" not found`);
         asArray
           .filter(key => key !== pathId)
           .forEach(set);
       } else {
-        check.assert.assigned(environment.paths[pathId], `Path ${ pathId } not found`);
+        check.assert.assigned(environment.paths[pathId], `Path id "${ pathId }" not found`);
         set(pathId);
       }
     });

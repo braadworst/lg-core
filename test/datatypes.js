@@ -56,7 +56,7 @@ tape('Datatypes invalid throws: path', test => {
       test.throws(() => {
         const road = core('client');
         road.path('pathId', datatype);
-      }, /Path id needs to be a string containing only letters and or numbers/);
+      }, /All path values need to be strings/);
     });
   test.end();
 });
