@@ -116,11 +116,14 @@ module.exports = environmentId => {
     check.assert.not.undefined(pathId, 'Path id cannot be empty');
     check.assert.not.undefined(middlewareId, 'Middleware id cannot be empty');
     check.assert.not.undefined(updateType, 'Update type cannot be empty');
-    check.assert.match(pathId, stringPattern, 'Path id needs to be a string containing only letters and or numbers');
+    check.assert.match(pathId, /^[a-z0-9\-\*]+$/i, 'Path id needs to be a string containing only letters, numbers, - or *');
     check.assert.match(middlewareId, stringPattern, 'Middleware id needs to be a string containing only letters and or numbers');
     check.assert.match(updateType, stringPattern, 'Update type needs to be a string containing only letters and or numbers');
     if (pathId.indexOf('*') > -1) {
-      check.assert.equal(pathId.length, 1, 'Path id needs to be * only or a path id not both');
+      check.assert.equal(pathId.length, 1, 'Path id needs to be "*" or a path id, not both');
+    }
+    if (pathId.indexOf('-') > -1) {
+      check.assert.not.equal(pathId.length, 1, 'Path id cannot be "-" only');
     }
 
     environmentsInUse.forEach(environment => {

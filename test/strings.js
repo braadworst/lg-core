@@ -48,12 +48,23 @@ tape('String patters throws: path', test => {
 });
 
 tape('String patters throws: run', test => {
-  fails.forEach(fail => {
+  ['', '@#!', '!@@!#ads'].forEach(fail => {
     test.throws(() => {
       const road = core('client');
       road.run(fail, 'middlewareId');
-    }, /Path id needs to be a string containing only letters and or numbers/);
+    }, /Path id needs to be a string containing only letters, numbers, - or */);
   });
+
+  test.throws(() => {
+    const road = core('client');
+    road.run('*something', 'middlewareId');
+  }, /Path id needs to be "\*" or a path id, not both/);
+
+  test.throws(() => {
+    const road = core('client');
+    road.run('-', 'middlewareId');
+  }, /Path id cannot be "-" only/);
+
   fails.forEach(fail => {
     test.throws(() => {
       const road = core('client');
@@ -64,18 +75,30 @@ tape('String patters throws: run', test => {
 });
 
 tape('String patters throws: runCustom', test => {
-  fails.forEach(fail => {
+  ['', '@#!', '!@@!#ads'].forEach(fail => {
     test.throws(() => {
       const road = core('client');
       road.runCustom(fail, 'middlewareId', 'updateType');
-    }, /Path id needs to be a string containing only letters and or numbers/);
+    }, /Path id needs to be a string containing only letters, numbers, - or */);
   });
+
+  test.throws(() => {
+    const road = core('client');
+    road.runCustom('*something', 'middlewareId', 'updateType');
+  }, /Path id needs to be "\*" or a path id, not both/);
+
+  test.throws(() => {
+    const road = core('client');
+    road.runCustom('-', 'middlewareId', 'updateType');
+  }, /Path id cannot be "-" only/);
+
   fails.forEach(fail => {
     test.throws(() => {
       const road = core('client');
       road.runCustom('pathId', fail, 'updateType');
     }, /Middleware id needs to be a string containing only letters and or numbers/);
   });
+
   fails.forEach(fail => {
     test.throws(() => {
       const road = core('client');
@@ -86,12 +109,23 @@ tape('String patters throws: runCustom', test => {
 });
 
 tape('String patters throws: once', test => {
-  fails.forEach(fail => {
+  ['', '@#!', '!@@!#ads'].forEach(fail => {
     test.throws(() => {
       const road = core('client');
       road.once(fail, 'middlewareId');
-    }, /Path id needs to be a string containing only letters and or numbers/);
+    }, /Path id needs to be a string containing only letters, numbers, - or */);
   });
+
+  test.throws(() => {
+    const road = core('client');
+    road.once('*something', 'middlewareId');
+  }, /Path id needs to be "\*" or a path id, not both/);
+
+  test.throws(() => {
+    const road = core('client');
+    road.once('-', 'middlewareId');
+  }, /Path id cannot be "-" only/);
+
   fails.forEach(fail => {
     test.throws(() => {
       const road = core('client');

@@ -67,7 +67,7 @@ tape('Datatypes invalid throws: run', test => {
       test.throws(() => {
         const road = core('client');
         road.run(datatype, 'middlewareId');
-      }, /Path id needs to be a string containing only letters and or numbers/);
+      }, /Path id needs to be a string containing only letters, numbers, - or */);
     });
   datatypes
     .forEach(datatype => {
@@ -85,7 +85,7 @@ tape('Datatypes invalid throws: runCustom', test => {
       test.throws(() => {
         const road = core('client');
         road.runCustom(datatype, 'middlewareId', 'updateType');
-      }, /Path id needs to be a string containing only letters and or numbers/);
+      }, /Path id needs to be a string containing only letters, numbers, - or */);
     });
   datatypes
     .forEach(datatype => {
@@ -110,7 +110,7 @@ tape('Datatypes invalid throws: once', test => {
       test.throws(() => {
         const road = core('client');
         road.once(datatype, 'middlewareId');
-      }, /Path id needs to be a string containing only letters and or numbers/);
+      }, /Path id needs to be a string containing only letters, numbers, - or */);
     });
   datatypes
     .forEach(datatype => {
