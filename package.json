@@ -6,22 +6,23 @@
   "scripts": {
     "test": "nyc tape test/*.js | tap-spec",
     "report": "nyc report --reporter=html",
-    "coverage": "nyc report --reporter=text-lcov | coveralls"
+    "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "all" : "npm run test && npm run report && npm run coverage"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lagoon-road/lg-core.git"
+    "url": "git+https://github.com/lagoon-road/lr-core.git"
   },
   "author": "Roy Niels",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/lagoon-road/lg-core/issues"
+    "url": "https://github.com/lagoon-road/lr-core/issues"
   },
   "keywords": [
     "core",
     "lagoon-road"
   ],
-  "homepage": "https://github.com/lagoon-road/lg-core#readme",
+  "homepage": "https://github.com/lagoon-road/lr-core#readme",
   "dependencies": {
     "check-types": "^7.1.5",
     "flat": "^2.0.1"
