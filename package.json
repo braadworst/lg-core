@@ -1,28 +1,27 @@
 {
   "name": "lr-core",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "The core for everything lagoon-road",
   "main": "index.js",
   "scripts": {
-    "test_coveralls": "COVERALLS_REPO_TOKEN=UyIu2l7bgl1HzqylCGc5PHnaF6UJDzkIz node_modules/.bin/tap --bail --color --reporter=nyan --cov test/*.js",
     "test": "nyc tape test/*.js | tap-spec",
     "report": "nyc report --reporter=html",
     "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/braadworst/lg-core.git"
+    "url": "git+https://github.com/lagoon-road/lg-core.git"
   },
   "author": "Roy Niels",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/braadworst/lg-core/issues"
+    "url": "https://github.com/lagoon-road/lg-core/issues"
   },
   "keywords": [
     "core",
     "lagoon-road"
   ],
-  "homepage": "https://github.com/braadworst/lg-core#readme",
+  "homepage": "https://github.com/lagoon-road/lg-core#readme",
   "dependencies": {
     "check-types": "^7.1.5",
     "flat": "^2.0.1"
