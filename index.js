@@ -72,7 +72,7 @@ module.exports = environmentId => {
       check.assert.not.assigned(environment.paths[id], `Path id "${ id }" has already been defined`);
       environment.paths[id] = { values : [], middleware : [], once : false, type : 'default' };
       environment.paths[id].values = values.reduce((reduced, value) => {
-        const group = environment[value] ? environment[value].values : [value];
+        const group = environment.paths[value] ? environment.paths[value].values : [value];
         return [...reduced, ...group];
       }, []);
     });
@@ -98,18 +98,21 @@ module.exports = environmentId => {
     check.assert.not.undefined(middlewareId, 'Middleware id cannot be empty');
     check.assert.match(middlewareId, stringPattern, 'Middleware id needs to be a string containing only letters and or numbers');
     environmentsInUse.forEach(environment => environment.error.push(middlewareId));
+    return exposed;
   }
 
   function noMatch(middlewareId) {
     check.assert.not.undefined(middlewareId, 'Middleware id cannot be empty');
     check.assert.match(middlewareId, stringPattern, 'Middleware id needs to be a string containing only letters and or numbers');
     environmentsInUse.forEach(environment => environment.noMatch.push(middlewareId));
+    return exposed;
   }
 
   function done(middlewareId) {
     check.assert.not.undefined(middlewareId, 'Middleware id cannot be empty');
     check.assert.match(middlewareId, stringPattern, 'Middleware id needs to be a string containing only letters and or numbers');
     environmentsInUse.forEach(environment => environment.done.push(middlewareId));
+    return exposed;
   }
 
   function add(pathId, middlewareId, updateType, once = false) {
@@ -131,8 +134,8 @@ module.exports = environmentId => {
 
       function set(id) {
         environment.paths[id].middleware.push(middlewareId);
-        environment.paths[id].eventType = eventType;
-        environment.paths[id].once      = once;
+        environment.paths[id].updateType = updateType;
+        environment.paths[id].once       = once;
       }
 
       if (pathId === '*') {
