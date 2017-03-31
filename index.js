@@ -1,11 +1,26 @@
-const check = require('check-types');
-const flat  = require('flat');
+const check     = require('check-types');
+const flat      = require('flat');
+const urlParser = require('lr-url-parser');
 
-module.exports = environmentId => {
-  let environmentsInUse,
+module.exports = (environmentId, options = {}) => {
+  let runningEnvironment,
+      environmentsInUse,
       environments        = {},
       availableMiddleware = {},
-      extensions          = {};
+      extensions          = {},
+      parsers             = [];
+
+  if (Array.isArray(options.parsers)) {
+    options.parsers.push(urlParser);
+  } else {
+    options.parsers = [urlParser];
+  }
+
+  options.parsers.forEach(parser => {
+    check.assert.function(parser.add, 'Parser needs to have a method called add');
+    check.assert.function(parser.parse, 'Parser needs to have a method called parse');
+    parsers.push(parser);
+  });
 
   const exposed = {
     extension,
@@ -27,8 +42,9 @@ module.exports = environmentId => {
   function environment(id) {
     check.assert.not.undefined(id, 'Environment id cannot be empty');
     check.assert.match(id, stringPattern, 'Environment id needs to be a string containing only letters and or numbers');
-    environments[id] = { paths : {}, noMatch : [], error : [], done : [] };
-    environmentsInUse = [environments[id]];
+    environments[id]   = { id, paths : {}, noMatch : [], error : [], done : [] };
+    environmentsInUse  = [environments[id]];
+    runningEnvironment = id;
     return exposed;
   }
 
@@ -37,7 +53,7 @@ module.exports = environmentId => {
     check.assert.not.undefined(extension, 'Extension cannot be empty');
     check.assert.match(id, stringPattern, 'Extension id needs to be a string containing only letters and or numbers');
     check.assert.not.assigned(extensions[id], `"${ id }" has already been defined as an extension`);
-    extensions[id] = isUpdater ? extension(update, { environments : environmentsInUse }) : extension;
+    extensions[id] = isUpdater ? extension(update) : extension;
     return exposed;
   }
 
@@ -70,7 +86,7 @@ module.exports = environmentId => {
     check.assert.array.of.string(values, 'All path values need to be strings');
     environmentsInUse.forEach(environment => {
       check.assert.not.assigned(environment.paths[id], `Path id "${ id }" has already been defined`);
-      environment.paths[id] = { values : [], middleware : [], once : false, type : 'default' };
+      environment.paths[id] = { values : [], middleware : [], once : false, type : 'get' };
       environment.paths[id].values = values.reduce((reduced, value) => {
         const group = environment.paths[value] ? environment.paths[value].values : [value];
         return [...reduced, ...group];
@@ -80,7 +96,7 @@ module.exports = environmentId => {
   }
 
   function run(pathId, middlewareId) {
-    add(pathId, middlewareId, 'default');
+    add(pathId, middlewareId, 'get');
     return exposed;
   }
 
@@ -90,7 +106,7 @@ module.exports = environmentId => {
   }
 
   function once(pathId, middlewareId) {
-    add(pathId, middlewareId, 'default', true);
+    add(pathId, middlewareId, 'get', true);
     return exposed;
   }
 
@@ -153,55 +169,41 @@ module.exports = environmentId => {
     });
   }
 
-  // function update(options, ...parameters) {
-  //
-  //   ({ environmentsToUpdate, method, path } = options);
-  //
-  //   check.assert.assigned(environmentsToUpdate, 'Please provide environments to update');
-  //   check.assert.assigned(method, 'Please provide a method name');
-  //   check.assert.assigned(path, 'Please provide a path name');
-  //   check.assert.nonEmptyString(method, 'Method needs to be of type string');
-  //   check.assert.nonEmptyString(path, 'Path needs to be of type string');
-  //   check.assert.positive(environmentsToUpdate.length - 1, 'Provide at least one environment name');
-  //   check.assert.array.of.nonEmptyString(environmentsToUpdate, 'All supplied environment names need to be a string');
-  //
-  //   options.method = options.method.toLowerCase();
-  //   environmentsToUpdate.forEach(environment => {
-  //     if (environments[environment]) {
-  //       const middleware = environments[environment].middleware;
-  //       const names = options.path[0] === '/' ? environments[environment].pathsByPath[options.path] : [options.path];
-  //       const stack = middleware
-  //         // .filter(record => listeners[options.method].indexOf(record.method) > -1)
-  //         .filter(record => record.names.filter(name => names.indexOf(name) > -1).length > 0);
-  //
-  //       let relay = {};
-  //       function thunkify(middleware) {
-  //         if (!middleware) { return function last() {}; }
-  //         if (typeof middleware.callback !== 'function') {
-  //           console.log(middleware);
-  //           throw new Error('Middleware needs to be a function');
-  //         }
-  //         return function(defined) {
-  //           isObject(defined);
-  //           relay = Object.assign({}, relay, defined)
-  //           console.log('calling middleware:', middleware.name);
-  //           middleware.callback(
-  //             thunkify(stack.shift()),
-  //             relay,
-  //             ...parameters
-  //           );
-  //         }
-  //       }
-  //
-  //       try {
-  //         thunkify(stack.shift())(extensions);
-  //       } catch (error) {
-  //         console.log('road had an error');
-  //         console.log(error);
-  //       }
-  //     }
-  //   });
-  // }
+  function update(options, ...parameters) {
+
+    options.updateType = !options.updateType || options.updateType == 'GET' ? 'default' : options.updateType.toLowerCase();
+
+    // const environment = environments.filter(environment => environment.id === runningEnvironment).pop();
+
+    // const stack = environment.middleware
+    //   .filter(record => record.names.filter(name => names.indexOf(name) > -1).length > 0);
+    //
+    // let relay = {};
+    // function thunkify(middleware) {
+    //   if (!middleware) { return function last() {}; }
+    //   if (typeof middleware.callback !== 'function') {
+    //     console.log(middleware);
+    //     throw new Error('Middleware needs to be a function');
+    //   }
+    //   return function(defined) {
+    //     isObject(defined);
+    //     relay = Object.assign({}, relay, defined)
+    //     console.log('calling middleware:', middleware.name);
+    //     middleware.callback(
+    //       thunkify(stack.shift()),
+    //       relay,
+    //       ...parameters
+    //     );
+    //   }
+    // }
+    //
+    // try {
+    //   thunkify(stack.shift())(extensions);
+    // } catch (error) {
+    //   console.log('road had an error');
+    //   console.log(error);
+    // }
+  }
 
   return exposed;
 };
