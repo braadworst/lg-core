@@ -76,7 +76,9 @@ module.exports = (environmentId, options = {}) => {
     environmentIds.forEach(id => {
       check.assert.not.undefined(id, 'Environment id cannot be empty');
       check.assert.match(id, stringPattern, 'Environment id needs to be a string containing only letters and or numbers');
-      check.assert.assigned(environments[id], `Environment "${ id }" doesn't exist`);
+      if (!environments[id]) {
+        environment(id);
+      }
     });
     environmentsInUse = environmentIds.forEach(id => environments[id]);
     return exposed;
