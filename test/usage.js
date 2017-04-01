@@ -73,6 +73,42 @@ tape('Middleware matching: update by id', test => {
   });
 });
 
+tape('Middleware matching: once', test => {
+  const server = http.createServer();
+  const router = require('lr-server-router')(server);
+
+  let done = (next, relay, request, response) => {
+    response.end();
+  };
+
+  let count = (next, relay) => {
+    next({ count : (relay.count ? relay.count + 1 : 1) });
+  }
+
+  let check = (next, relay) => {
+    if (relay.check) {
+      test.equal(relay.count, 1);
+      test.end();
+    }
+    next({ check : true });
+  }
+
+  let road = core('webserver', { resetAfterCycle : false })
+    .extension('router', router, true)
+    .middleware({ done, count, check })
+    .match('home', '/')
+    .once('home', 'count')
+    .run('home', 'check')
+    .done('done');
+
+  server.listen(4009, function() {});
+  http.get('http://localhost:4009', response => {
+    http.get('http://localhost:4009', response => {
+      server.close();
+    });
+  });
+});
+
 tape('Middleware matching: specific, negative, wildcard, no done', test => {
   const server = http.createServer();
   const router = require('lr-server-router')(server);
@@ -92,10 +128,11 @@ tape('Middleware matching: specific, negative, wildcard, no done', test => {
     .match('home', '/')
     .match('login', '/login')
     .match('both', 'home', 'login')
+    .match('triple', 'both', '/something')
     .run('home', 'emptyNext')
     .run('home', 'middleware')
     .run('-login', 'negative')
-    .run('*', 'wildcard')
+    .run('both', 'wildcard')
     .run('*', 'done')
 
   server.listen(4001, function() {});

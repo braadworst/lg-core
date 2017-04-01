@@ -22,9 +22,40 @@ tape('Exists throws: middleware', test => {
 tape('Exists throws: match', test => {
   test.throws(() => {
     core('client')
-      .match('home', '/')
+      .match('home', '/home')
       .match('home', '/')
   }, /Match id "home" has already been defined/);
+  test.throws(() => {
+    core('client')
+      .match('home', '/')
+      .match('login', '/')
+  }, /Match value "\/" has already been defined/);
+  test.throws(() => {
+    core('client')
+      .match('home', '/')
+      .match('login', '/login')
+      .match('both', 'home', 'login', '/')
+  }, /Match value "\/" has already been defined/);
+  test.throws(() => {
+    core('client')
+      .match('home', '/')
+      .match('login', '/login')
+      .match('both', 'home', 'login', 'login')
+  }, /Cannot have duplicates as values/);
+  test.throws(() => {
+    core('client')
+      .match('home', '/')
+      .match('login', '/login')
+      .match('both', 'home', 'login', '/somethingnew')
+      .match('triple', 'both', 'login')
+  }, /You are grouping values that both contain the same base value/);
+  test.throws(() => {
+    core('client')
+      .match('home', '/')
+      .match('login', '/login')
+      .match('both', 'home', 'login', '/somethingnew')
+      .match('triple', 'both', '/somethingnew')
+  }, /You are grouping values that both contain the same base value/);
   test.end();
 });
 

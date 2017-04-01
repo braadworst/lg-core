@@ -1,27 +1,29 @@
 const check     = require('check-types');
 const flat      = require('flat');
-const urlParser = require('lr-url-parser');
 
 module.exports = (environmentId, options = {}) => {
   let runningEnvironment,
       environmentsInUse,
       environments        = {},
       availableMiddleware = {},
-      parsers             = [],
+      parser              = require('lr-url-parser')(),
       relay               = { extensions : {}, update },
-      stack               = [];
+      extensions          = {},
+      stack               = [],
+      uniqueValues        = [];
+      defaultUpdateType   = 'default';
+      resetAfterCycle     = true;
 
-  if (Array.isArray(options.parsers)) {
-    options.parsers.push(urlParser);
-  } else {
-    options.parsers = [urlParser];
+  if (options.parser) {
+    check.assert.function(options.parser.add, 'Parser needs to have a method called add');
+    check.assert.function(options.parser.parse, 'Parser needs to have a method called parse');
+    parser = options.parser;
   }
 
-  options.parsers.forEach(parser => {
-    check.assert.function(parser.add, 'Parser needs to have a method called add');
-    check.assert.function(parser.parse, 'Parser needs to have a method called parse');
-    parsers.push(parser);
-  });
+  if (options.resetAfterCycle !== undefined) {
+    check.assert.boolean(options.resetAfterCycle, 'resetAfterCycle needs to be a boolean');
+    resetAfterCycle = options.resetAfterCycle;
+  }
 
   const exposed = {
     extension,
@@ -43,7 +45,7 @@ module.exports = (environmentId, options = {}) => {
   function environment(id) {
     check.assert.not.undefined(id, 'Environment id cannot be empty');
     check.assert.match(id, stringPattern, 'Environment id needs to be a string containing only letters and or numbers');
-    environments[id]   = { id, matchesById : {}, matchesByValue : {}, noMatch : [], error : [], done : [] };
+    environments[id]   = { id, matches : {}, noMatch : [], error : [], done : [] };
     environmentsInUse  = [environments[id]];
     runningEnvironment = id;
     return exposed;
@@ -53,13 +55,13 @@ module.exports = (environmentId, options = {}) => {
     check.assert.not.undefined(id, 'Extension id cannot be empty');
     check.assert.not.undefined(extension, 'Extension cannot be empty');
     check.assert.match(id, stringPattern, 'Extension id needs to be a string containing only letters and or numbers');
-    check.assert.not.assigned(relay.extensions[id], `"${ id }" has already been defined as an extension`);
-    relay.extensions[id] = isUpdater ? extension(update) : extension;
+    check.assert.not.assigned(extensions[id], `"${ id }" has already been defined as an extension`);
+    extensions[id] = isUpdater ? extension(update) : extension;
     return exposed;
   }
 
   function middleware(newMiddleware) {
-    check.assert.not.undefined(newMiddleware, 'Middleware cannot be empty');
+    check.assert.zero(arguments.length - 1, 'Middleware needs exactly one argument');
     check.assert.nonEmptyObject(newMiddleware, 'Provided middleware needs to be a non empty object');
     newMiddleware = flat(newMiddleware);
     Object.keys(newMiddleware).forEach(id => {
@@ -85,27 +87,28 @@ module.exports = (environmentId, options = {}) => {
     check.assert.greater(values.length, 0, 'Please provide at least one value for your match');
     check.assert.match(id, stringPattern, 'Match id needs to be a string containing only letters and or numbers');
     check.assert.array.of.string(values, 'All match values need to be strings');
+    values.forEach((value, index) => check.assert.equal(values.indexOf(value), index, 'Cannot have duplicates as values'));
     environmentsInUse.forEach(environment => {
-      check.assert.not.assigned(environment.matchesById[id], `Match id "${ id }" has already been defined`);
-      environment.matchesById[id] = { values : [], middlewareIds : [], once : false, type : 'default' };
-      environment.matchesById[id].values = values.reduce((reduced, value) => {
-        const group = environment.matchesById[value] ? environment.matchesById[value].values : [value];
+      values
+        .filter(value => !environment.matches[value])
+        .forEach(value => {
+          check.assert.not.zero(uniqueValues.indexOf(value), `Match value "${ value }" has already been defined`);
+          uniqueValues.push(value);
+        });
+      check.assert.not.assigned(environment.matches[id], `Match id "${ id }" has already been defined`);
+      const merged = values.reduce((reduced, value) => {
+        const group = environment.matches[value] ? environment.matches[value].values : [value];
         return [...reduced, ...group];
-      }, []);
-
-      values = environment.matchesById[id].values;
-      values.forEach(value => {
-        if (!environment.matchesByValue[value]) {
-          environment.matchesByValue[value] = { id : id, middlewareIds : [], once : false, type : 'default' };
-          parsers.forEach(parser => parser.add(value));
-        }
-      });
+      }, [])
+      merged.forEach((value, index) => check.assert.equal(merged.indexOf(value), index, 'You are grouping values that both contain the same base value'));
+      environment.matches[id] = { id, values : merged, middleware : []};
     });
+
     return exposed;
   }
 
   function run(matchId, middlewareId) {
-    add(matchId, middlewareId, 'default');
+    add(matchId, middlewareId, defaultUpdateType);
     return exposed;
   }
 
@@ -115,28 +118,28 @@ module.exports = (environmentId, options = {}) => {
   }
 
   function once(matchId, middlewareId) {
-    add(matchId, middlewareId, 'default', true);
+    add(matchId, middlewareId, defaultUpdateType, true);
     return exposed;
   }
 
   function error(middlewareId) {
-    check.assert.not.undefined(middlewareId, 'Middleware id cannot be empty');
+    check.assert.zero(arguments.length - 1, 'Error needs exactly one argument');
     check.assert.match(middlewareId, stringPattern, 'Middleware id needs to be a string containing only letters and or numbers');
-    environmentsInUse.forEach(environment => environment.error.push(middlewareId));
+    environmentsInUse.forEach(environment => environment.error.push({ id : middlewareId }));
     return exposed;
   }
 
   function noMatch(middlewareId) {
-    check.assert.not.undefined(middlewareId, 'Middleware id cannot be empty');
+    check.assert.zero(arguments.length - 1, 'NoMatch needs exactly one argument');
     check.assert.match(middlewareId, stringPattern, 'Middleware id needs to be a string containing only letters and or numbers');
-    environmentsInUse.forEach(environment => environment.noMatch.push(middlewareId));
+    environmentsInUse.forEach(environment => environment.noMatch.push({ id : middlewareId }));
     return exposed;
   }
 
   function done(middlewareId) {
-    check.assert.not.undefined(middlewareId, 'Middleware id cannot be empty');
+    check.assert.zero(arguments.length - 1, 'Done needs exactly one argument');
     check.assert.match(middlewareId, stringPattern, 'Middleware id needs to be a string containing only letters and or numbers');
-    environmentsInUse.forEach(environment => environment.done.push(middlewareId));
+    environmentsInUse.forEach(environment => environment.done.push({ id : middlewareId }));
     return exposed;
   }
 
@@ -155,36 +158,40 @@ module.exports = (environmentId, options = {}) => {
     }
 
     environmentsInUse.forEach(environment => {
-      const asArray = Object.keys(environment.matchesById);
-
       function set(id) {
-        environment.matchesById[id].middlewareIds.push(middlewareId);
-        environment.matchesById[id].updateType = updateType.toLowerCase();
-        environment.matchesById[id].once       = once;
-        environment.matchesById[id].values.forEach(value => {
-          if (environment.matchesByValue[value].middlewareIds.indexOf(middlewareId) === -1) {
-            environment.matchesByValue[value].middlewareIds.push(middlewareId);
-          }
-        })
+        environment.matches[id].middleware.push({ matchId : id, id : middlewareId, updateType, once, hasRanOnce : false });
       }
 
+      let nonGroupMatches = Object
+        .keys(environment.matches)
+        .filter(key => environment.matches[key].values.length === 1)
+        .map(key => environment.matches[key]);
+
       if (matchId === '*') {
-        asArray.forEach(set);
+        nonGroupMatches
+          .forEach(match => set(match.id));
       } else if (matchId[0] === '-') {
         matchId = matchId.slice(1);
-        check.assert.assigned(environment.matchesById[matchId], `Match id "${ matchId }" not found`);
-        asArray
-          .filter(key => key !== matchId)
-          .forEach(set);
+        check.assert.assigned(environment.matches[matchId], `Match id "${ matchId }" not found`);
+        nonGroupMatches
+          .filter(match => match.key !== matchId)
+          .forEach(match => set(match.id));
       } else {
-        check.assert.assigned(environment.matchesById[matchId], `Match id "${ matchId }" not found`);
-        set(matchId);
+        check.assert.assigned(environment.matches[matchId], `Match id "${ matchId }" not found`);
+        const matchValues = environment.matches[matchId].values;
+        nonGroupMatches
+          .filter(match => matchValues.indexOf(match.values[0]) > -1)
+          .forEach(match => set(match.id));
       }
     });
   }
 
   function update(options, ...parameters) {
-    options.updateType = !options.updateType || options.updateType == 'GET' ? 'default' : options.updateType.toLowerCase();
+    if (resetAfterCycle) {
+      relay = { extensions, update };
+    }
+
+    options.updateType = !options.updateType || options.updateType == 'GET' ? defaultUpdateType : options.updateType.toLowerCase();
 
     check.assert(
       check.any(check.map(options, { matchId : check.assigned, matchValue : check.assigned })),
@@ -192,15 +199,37 @@ module.exports = (environmentId, options = {}) => {
     );
 
     const environment = environments[runningEnvironment];
-    const match       = options.matchId ?
-      environment.matchesById[options.matchId] :
-      environment.matchesByValue[options.matchValue];
 
-    if (match) {
-      stack = [...stack, ...match.middlewareIds];
+    let middleware = [];
+    if (options.matchValue) {
+      middleware = Object
+        .keys(environment.matches)
+        .map(key => environment.matches[key])
+        .filter(match => match.values.indexOf(options.matchValue) > -1)
+        .reduce((reduced, current) => [...reduced, ...current.middleware], [])
+        .filter(record => record.updateType === options.updateType);
+    } else if (environment.matches[options.matchId]) {
+      middleware = environment.matches[options.matchId].middleware
+        .filter(match => match.updateType === options.updateType);
+    }
+
+    if (middleware.length) {
+      const matchId = middleware[0].matchId;
+      middleware = middleware
+        .filter(record => !record.hasRanOnce)
+      environment.matches[matchId].middleware = middleware
+        .map(record => {
+          if (record.once) {
+            record.hasRanOnce = true;
+          }
+          return record;
+        });
+      stack = [...stack, ...middleware];
     } else {
-      console.warn(`No match found for ${ options.matchId ? options.matchId : options.matchValue}`);
       stack = [...stack, ...environment.noMatch];
+      if (!environment.noMatch.length) {
+        console.warn('No matches found and also no "noMatch" middleware present');
+      }
     }
 
     stack = [...stack, ...environment.done];
@@ -209,18 +238,14 @@ module.exports = (environmentId, options = {}) => {
       console.warn('There has been no middleware assigned to the done hook');
     }
 
-    function thunkify(middlewareId) {
-      if (middlewareId) {
-        check.assert.assigned(availableMiddleware[middlewareId], `Middleware ${ middlewareId } not found`);
-        check.assert.function(availableMiddleware[middlewareId], 'Middleware needs to be a function');
+    function thunkify(middleware) {
+      if (middleware) {
+        check.assert.assigned(availableMiddleware[middleware.id], `Middleware ${ middleware.id } not found`);
+        check.assert.function(availableMiddleware[middleware.id], 'Middleware needs to be a function');
         return function(defined = {}) {
           check.assert.object(defined, 'Relay additions need to be an object');
           relay = Object.assign({}, relay, defined)
-          availableMiddleware[middlewareId](
-            (stack.length < 1 ? () => {} : thunkify(stack.shift())),
-            relay,
-            ...parameters
-          );
+          availableMiddleware[middleware.id]((stack.length < 1 ? () => {} : thunkify(stack.shift())), relay, ...parameters);
         }
       } else {
         return () => {};

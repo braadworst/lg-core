@@ -139,7 +139,7 @@ tape('String patters throws: error', test => {
   fails.forEach(fail => {
     test.throws(() => {
       const road = core('client');
-      road.error(fail, 'middlewareId');
+      road.error(fail);
     }, /Middleware id needs to be a string containing only letters and or numbers/);
   });
   test.end();
@@ -149,7 +149,7 @@ tape('String patters throws: noMatch', test => {
   fails.forEach(fail => {
     test.throws(() => {
       const road = core('client');
-      road.noMatch(fail, 'middlewareId');
+      road.noMatch(fail);
     }, /Middleware id needs to be a string containing only letters and or numbers/);
   });
   test.end();
@@ -159,7 +159,7 @@ tape('String patters throws: done', test => {
   fails.forEach(fail => {
     test.throws(() => {
       const road = core('client');
-      road.done(fail, 'middlewareId');
+      road.done(fail);
     }, /Middleware id needs to be a string containing only letters and or numbers/);
   });
   test.end();
