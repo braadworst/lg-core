@@ -34,15 +34,15 @@ tape('Empty throws: where', test => {
   test.end();
 });
 
-tape('Empty throws: path', test => {
+tape('Empty throws: match', test => {
   test.throws(() => {
     const road = core('client');
-    road.path();
-  }, /Path id cannot be empty/);
+    road.match();
+  }, /Match id cannot be empty/);
   test.throws(() => {
     const road = core('client');
-    road.path('pathId');
-  }, /Please provide at least one value for your path/);
+    road.match('matchId');
+  }, /Please provide at least one value for your match/);
   test.end();
 });
 
@@ -50,10 +50,10 @@ tape('Empty throws: run', test => {
   test.throws(() => {
     const road = core('client');
     road.run();
-  }, /Path id cannot be empty/);
+  }, /Match id cannot be empty/);
   test.throws(() => {
     const road = core('client');
-    road.run('pathId');
+    road.run('matchId');
   }, /Middleware id cannot be empty/);
   test.end();
 });
@@ -62,14 +62,14 @@ tape('Empty throws: runCustom', test => {
   test.throws(() => {
     const road = core('client');
     road.runCustom();
-  }, /Path id cannot be empty/);
+  }, /Match id cannot be empty/);
   test.throws(() => {
     const road = core('client');
-    road.runCustom('pathId');
+    road.runCustom('matchId');
   }, /Middleware id cannot be empty/);
   test.throws(() => {
     const road = core('client');
-    road.runCustom('pathId', 'middlewareId');
+    road.runCustom('matchId', 'middlewareId');
   }, /Update type cannot be empty/);
   test.end();
 });
@@ -78,10 +78,10 @@ tape('Empty throws: once', test => {
   test.throws(() => {
     const road = core('client');
     road.once();
-  }, /Path id cannot be empty/);
+  }, /Match id cannot be empty/);
   test.throws(() => {
     const road = core('client');
-    road.once('pathId');
+    road.once('matchId');
   }, /Middleware id cannot be empty/);
   test.end();
 });

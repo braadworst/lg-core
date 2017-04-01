@@ -37,12 +37,12 @@ tape('String patters throws: where', test => {
   test.end();
 });
 
-tape('String patters throws: path', test => {
+tape('String patters throws: match', test => {
   fails.forEach(fail => {
     test.throws(() => {
       const road = core('client');
-      road.path(fail, 'ok');
-    }, /Path id needs to be a string containing only letters and or numbers/);
+      road.match(fail, 'ok');
+    }, /Match id needs to be a string containing only letters and or numbers/);
   });
   test.end();
 });
@@ -52,23 +52,23 @@ tape('String patters throws: run', test => {
     test.throws(() => {
       const road = core('client');
       road.run(fail, 'middlewareId');
-    }, /Path id needs to be a string containing only letters, numbers, - or */);
+    }, /Match id needs to be a string containing only letters, numbers, - or */);
   });
 
   test.throws(() => {
     const road = core('client');
     road.run('*something', 'middlewareId');
-  }, /Path id needs to be "\*" or a path id, not both/);
+  }, /Match id needs to be "\*" or a match id, not both/);
 
   test.throws(() => {
     const road = core('client');
     road.run('-', 'middlewareId');
-  }, /Path id cannot be "-" only/);
+  }, /Match id cannot be "-" only/);
 
   fails.forEach(fail => {
     test.throws(() => {
       const road = core('client');
-      road.run('pathId', fail);
+      road.run('matchId', fail);
     }, /Middleware id needs to be a string containing only letters and or numbers/);
   });
   test.end();
@@ -79,30 +79,30 @@ tape('String patters throws: runCustom', test => {
     test.throws(() => {
       const road = core('client');
       road.runCustom(fail, 'middlewareId', 'updateType');
-    }, /Path id needs to be a string containing only letters, numbers, - or */);
+    }, /Match id needs to be a string containing only letters, numbers, - or */);
   });
 
   test.throws(() => {
     const road = core('client');
     road.runCustom('*something', 'middlewareId', 'updateType');
-  }, /Path id needs to be "\*" or a path id, not both/);
+  }, /Match id needs to be "\*" or a match id, not both/);
 
   test.throws(() => {
     const road = core('client');
     road.runCustom('-', 'middlewareId', 'updateType');
-  }, /Path id cannot be "-" only/);
+  }, /Match id cannot be "-" only/);
 
   fails.forEach(fail => {
     test.throws(() => {
       const road = core('client');
-      road.runCustom('pathId', fail, 'updateType');
+      road.runCustom('matchId', fail, 'updateType');
     }, /Middleware id needs to be a string containing only letters and or numbers/);
   });
 
   fails.forEach(fail => {
     test.throws(() => {
       const road = core('client');
-      road.runCustom('pathId', 'middlewareId', fail);
+      road.runCustom('matchId', 'middlewareId', fail);
     }, /Update type needs to be a string containing only letters and or numbers/);
   });
   test.end();
@@ -113,23 +113,23 @@ tape('String patters throws: once', test => {
     test.throws(() => {
       const road = core('client');
       road.once(fail, 'middlewareId');
-    }, /Path id needs to be a string containing only letters, numbers, - or */);
+    }, /Match id needs to be a string containing only letters, numbers, - or */);
   });
 
   test.throws(() => {
     const road = core('client');
     road.once('*something', 'middlewareId');
-  }, /Path id needs to be "\*" or a path id, not both/);
+  }, /Match id needs to be "\*" or a match id, not both/);
 
   test.throws(() => {
     const road = core('client');
     road.once('-', 'middlewareId');
-  }, /Path id cannot be "-" only/);
+  }, /Match id cannot be "-" only/);
 
   fails.forEach(fail => {
     test.throws(() => {
       const road = core('client');
-      road.once('pathId', fail);
+      road.once('matchId', fail);
     }, /Middleware id needs to be a string containing only letters and or numbers/);
   });
   test.end();

@@ -7,8 +7,9 @@ module.exports = (environmentId, options = {}) => {
       environmentsInUse,
       environments        = {},
       availableMiddleware = {},
-      extensions          = {},
-      parsers             = [];
+      parsers             = [],
+      relay               = { extensions : {}, update },
+      stack               = [];
 
   if (Array.isArray(options.parsers)) {
     options.parsers.push(urlParser);
@@ -26,7 +27,7 @@ module.exports = (environmentId, options = {}) => {
     extension,
     middleware,
     where,
-    path,
+    match,
     run,
     runCustom,
     once,
@@ -42,7 +43,7 @@ module.exports = (environmentId, options = {}) => {
   function environment(id) {
     check.assert.not.undefined(id, 'Environment id cannot be empty');
     check.assert.match(id, stringPattern, 'Environment id needs to be a string containing only letters and or numbers');
-    environments[id]   = { id, paths : {}, noMatch : [], error : [], done : [] };
+    environments[id]   = { id, matchesById : {}, matchesByValue : {}, noMatch : [], error : [], done : [] };
     environmentsInUse  = [environments[id]];
     runningEnvironment = id;
     return exposed;
@@ -52,8 +53,8 @@ module.exports = (environmentId, options = {}) => {
     check.assert.not.undefined(id, 'Extension id cannot be empty');
     check.assert.not.undefined(extension, 'Extension cannot be empty');
     check.assert.match(id, stringPattern, 'Extension id needs to be a string containing only letters and or numbers');
-    check.assert.not.assigned(extensions[id], `"${ id }" has already been defined as an extension`);
-    extensions[id] = isUpdater ? extension(update) : extension;
+    check.assert.not.assigned(relay.extensions[id], `"${ id }" has already been defined as an extension`);
+    relay.extensions[id] = isUpdater ? extension(update) : extension;
     return exposed;
   }
 
@@ -79,34 +80,42 @@ module.exports = (environmentId, options = {}) => {
     return exposed;
   }
 
-  function path(id, ...values) {
-    check.assert.not.undefined(id, 'Path id cannot be empty');
-    check.assert.greater(values.length, 0, 'Please provide at least one value for your path');
-    check.assert.match(id, stringPattern, 'Path id needs to be a string containing only letters and or numbers');
-    check.assert.array.of.string(values, 'All path values need to be strings');
+  function match(id, ...values) {
+    check.assert.not.undefined(id, 'Match id cannot be empty');
+    check.assert.greater(values.length, 0, 'Please provide at least one value for your match');
+    check.assert.match(id, stringPattern, 'Match id needs to be a string containing only letters and or numbers');
+    check.assert.array.of.string(values, 'All match values need to be strings');
     environmentsInUse.forEach(environment => {
-      check.assert.not.assigned(environment.paths[id], `Path id "${ id }" has already been defined`);
-      environment.paths[id] = { values : [], middleware : [], once : false, type : 'get' };
-      environment.paths[id].values = values.reduce((reduced, value) => {
-        const group = environment.paths[value] ? environment.paths[value].values : [value];
+      check.assert.not.assigned(environment.matchesById[id], `Match id "${ id }" has already been defined`);
+      environment.matchesById[id] = { values : [], middlewareIds : [], once : false, type : 'default' };
+      environment.matchesById[id].values = values.reduce((reduced, value) => {
+        const group = environment.matchesById[value] ? environment.matchesById[value].values : [value];
         return [...reduced, ...group];
       }, []);
+
+      values = environment.matchesById[id].values;
+      values.forEach(value => {
+        if (!environment.matchesByValue[value]) {
+          environment.matchesByValue[value] = { id : id, middlewareIds : [], once : false, type : 'default' };
+          parsers.forEach(parser => parser.add(value));
+        }
+      });
     });
     return exposed;
   }
 
-  function run(pathId, middlewareId) {
-    add(pathId, middlewareId, 'get');
+  function run(matchId, middlewareId) {
+    add(matchId, middlewareId, 'default');
     return exposed;
   }
 
-  function runCustom(pathId, middlewareId, updateType) {
-    add(pathId, middlewareId, updateType);
+  function runCustom(matchId, middlewareId, updateType) {
+    add(matchId, middlewareId, updateType);
     return exposed;
   }
 
-  function once(pathId, middlewareId) {
-    add(pathId, middlewareId, 'get', true);
+  function once(matchId, middlewareId) {
+    add(matchId, middlewareId, 'default', true);
     return exposed;
   }
 
@@ -131,78 +140,103 @@ module.exports = (environmentId, options = {}) => {
     return exposed;
   }
 
-  function add(pathId, middlewareId, updateType, once = false) {
-    check.assert.not.undefined(pathId, 'Path id cannot be empty');
+  function add(matchId, middlewareId, updateType, once = false) {
+    check.assert.not.undefined(matchId, 'Match id cannot be empty');
     check.assert.not.undefined(middlewareId, 'Middleware id cannot be empty');
     check.assert.not.undefined(updateType, 'Update type cannot be empty');
-    check.assert.match(pathId, /^[a-z0-9\-\*]+$/i, 'Path id needs to be a string containing only letters, numbers, - or *');
+    check.assert.match(matchId, /^[a-z0-9\-\*]+$/i, 'Match id needs to be a string containing only letters, numbers, - or *');
     check.assert.match(middlewareId, stringPattern, 'Middleware id needs to be a string containing only letters and or numbers');
     check.assert.match(updateType, stringPattern, 'Update type needs to be a string containing only letters and or numbers');
-    if (pathId.indexOf('*') > -1) {
-      check.assert.equal(pathId.length, 1, 'Path id needs to be "*" or a path id, not both');
+    if (matchId.indexOf('*') > -1) {
+      check.assert.equal(matchId.length, 1, 'Match id needs to be "*" or a match id, not both');
     }
-    if (pathId.indexOf('-') > -1) {
-      check.assert.not.equal(pathId.length, 1, 'Path id cannot be "-" only');
+    if (matchId.indexOf('-') > -1) {
+      check.assert.not.equal(matchId.length, 1, 'Match id cannot be "-" only');
     }
 
     environmentsInUse.forEach(environment => {
-      const asArray = Object.keys(environment.paths);
+      const asArray = Object.keys(environment.matchesById);
 
       function set(id) {
-        environment.paths[id].middleware.push(middlewareId);
-        environment.paths[id].updateType = updateType;
-        environment.paths[id].once       = once;
+        environment.matchesById[id].middlewareIds.push(middlewareId);
+        environment.matchesById[id].updateType = updateType.toLowerCase();
+        environment.matchesById[id].once       = once;
+        environment.matchesById[id].values.forEach(value => {
+          if (environment.matchesByValue[value].middlewareIds.indexOf(middlewareId) === -1) {
+            environment.matchesByValue[value].middlewareIds.push(middlewareId);
+          }
+        })
       }
 
-      if (pathId === '*') {
+      if (matchId === '*') {
         asArray.forEach(set);
-      } else if (pathId[0] === '-') {
-        pathId = pathId.slice(1);
-        check.assert.assigned(environment.paths[pathId], `Path id "${ pathId }" not found`);
+      } else if (matchId[0] === '-') {
+        matchId = matchId.slice(1);
+        check.assert.assigned(environment.matchesById[matchId], `Match id "${ matchId }" not found`);
         asArray
-          .filter(key => key !== pathId)
+          .filter(key => key !== matchId)
           .forEach(set);
       } else {
-        check.assert.assigned(environment.paths[pathId], `Path id "${ pathId }" not found`);
-        set(pathId);
+        check.assert.assigned(environment.matchesById[matchId], `Match id "${ matchId }" not found`);
+        set(matchId);
       }
     });
   }
 
   function update(options, ...parameters) {
-
     options.updateType = !options.updateType || options.updateType == 'GET' ? 'default' : options.updateType.toLowerCase();
 
-    // const environment = environments.filter(environment => environment.id === runningEnvironment).pop();
+    check.assert(
+      check.any(check.map(options, { matchId : check.assigned, matchValue : check.assigned })),
+      'You either need to specify a match id or a match value'
+    );
 
-    // const stack = environment.middleware
-    //   .filter(record => record.names.filter(name => names.indexOf(name) > -1).length > 0);
-    //
-    // let relay = {};
-    // function thunkify(middleware) {
-    //   if (!middleware) { return function last() {}; }
-    //   if (typeof middleware.callback !== 'function') {
-    //     console.log(middleware);
-    //     throw new Error('Middleware needs to be a function');
-    //   }
-    //   return function(defined) {
-    //     isObject(defined);
-    //     relay = Object.assign({}, relay, defined)
-    //     console.log('calling middleware:', middleware.name);
-    //     middleware.callback(
-    //       thunkify(stack.shift()),
-    //       relay,
-    //       ...parameters
-    //     );
-    //   }
-    // }
-    //
-    // try {
-    //   thunkify(stack.shift())(extensions);
-    // } catch (error) {
-    //   console.log('road had an error');
-    //   console.log(error);
-    // }
+    const environment = environments[runningEnvironment];
+    const match       = options.matchId ?
+      environment.matchesById[options.matchId] :
+      environment.matchesByValue[options.matchValue];
+
+    if (match) {
+      stack = [...stack, ...match.middlewareIds];
+    } else {
+      console.warn(`No match found for ${ options.matchId ? options.matchId : options.matchValue}`);
+      stack = [...stack, ...environment.noMatch];
+    }
+
+    stack = [...stack, ...environment.done];
+
+    if (environment.done.length < 1) {
+      console.warn('There has been no middleware assigned to the done hook');
+    }
+
+    function thunkify(middlewareId) {
+      if (middlewareId) {
+        check.assert.assigned(availableMiddleware[middlewareId], `Middleware ${ middlewareId } not found`);
+        check.assert.function(availableMiddleware[middlewareId], 'Middleware needs to be a function');
+        return function(defined = {}) {
+          check.assert.object(defined, 'Relay additions need to be an object');
+          relay = Object.assign({}, relay, defined)
+          availableMiddleware[middlewareId](
+            (stack.length < 1 ? () => {} : thunkify(stack.shift())),
+            relay,
+            ...parameters
+          );
+        }
+      } else {
+        return () => {};
+      }
+    }
+
+    try {
+      thunkify(stack.shift())(relay);
+    } catch (error) {
+      if (environment.error.length < 1) {
+        console.warn('Error running the middleware stack, but no error hook found');
+      }
+      relay.error = error;
+      stack = [...environment.error, ...environment.done];
+      thunkify(stack.shift())(relay);
+    }
   }
 
   return exposed;

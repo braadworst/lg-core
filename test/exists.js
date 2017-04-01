@@ -19,12 +19,12 @@ tape('Exists throws: middleware', test => {
   test.end();
 });
 
-tape('Exists throws: path', test => {
+tape('Exists throws: match', test => {
   test.throws(() => {
     core('client')
-      .path('home', '/')
-      .path('home', '/')
-  }, /Path id "home" has already been defined/);
+      .match('home', '/')
+      .match('home', '/')
+  }, /Match id "home" has already been defined/);
   test.end();
 });
 
@@ -32,7 +32,7 @@ tape('Exists throws: run', test => {
   test.throws(() => {
     core('client')
       .run('home', 'middlewareId')
-  }, /Path id "home" not found/);
+  }, /Match id "home" not found/);
   test.end();
 });
 
@@ -40,7 +40,7 @@ tape('Exists throws: runCustom', test => {
   test.throws(() => {
     core('client')
       .runCustom('home', 'middlewareId', 'get')
-  }, /Path id "home" not found/);
+  }, /Match id "home" not found/);
   test.end();
 });
 
@@ -48,6 +48,6 @@ tape('Exists throws: once', test => {
   test.throws(() => {
     core('client')
       .once('home', 'middlewareId')
-  }, /Path id "home" not found/);
+  }, /Match id "home" not found/);
   test.end();
 });

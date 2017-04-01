@@ -43,20 +43,20 @@ tape('Datatypes invalid throws: where', test => {
   test.end();
 });
 
-tape('Datatypes invalid throws: path', test => {
+tape('Datatypes invalid throws: match', test => {
   datatypes
     .forEach(datatype => {
       test.throws(() => {
         const road = core('client');
-        road.path(datatype, 'pathId');
-      }, /Path id needs to be a string containing only letters and or numbers/);
+        road.match(datatype, 'matchId');
+      }, /Match id needs to be a string containing only letters and or numbers/);
     });
   datatypes
     .forEach(datatype => {
       test.throws(() => {
         const road = core('client');
-        road.path('pathId', datatype);
-      }, /All path values need to be strings/);
+        road.match('matchId', datatype);
+      }, /All match values need to be strings/);
     });
   test.end();
 });
@@ -67,13 +67,13 @@ tape('Datatypes invalid throws: run', test => {
       test.throws(() => {
         const road = core('client');
         road.run(datatype, 'middlewareId');
-      }, /Path id needs to be a string containing only letters, numbers, - or */);
+      }, /Match id needs to be a string containing only letters, numbers, - or */);
     });
   datatypes
     .forEach(datatype => {
       test.throws(() => {
         const road = core('client');
-        road.run('pathId', datatype);
+        road.run('matchId', datatype);
       }, /Middleware id needs to be a string containing only letters and or numbers/);
     });
   test.end();
@@ -85,20 +85,20 @@ tape('Datatypes invalid throws: runCustom', test => {
       test.throws(() => {
         const road = core('client');
         road.runCustom(datatype, 'middlewareId', 'updateType');
-      }, /Path id needs to be a string containing only letters, numbers, - or */);
+      }, /Match id needs to be a string containing only letters, numbers, - or */);
     });
   datatypes
     .forEach(datatype => {
       test.throws(() => {
         const road = core('client');
-        road.runCustom('pathId', datatype, 'updateType');
+        road.runCustom('matchId', datatype, 'updateType');
       }, /Middleware id needs to be a string containing only letters and or numbers/);
     });
   datatypes
     .forEach(datatype => {
       test.throws(() => {
         const road = core('client');
-        road.runCustom('pathId', 'middlewareId', datatype);
+        road.runCustom('matchId', 'middlewareId', datatype);
       }, /Update type needs to be a string containing only letters and or numbers/);
     });
   test.end();
@@ -110,13 +110,13 @@ tape('Datatypes invalid throws: once', test => {
       test.throws(() => {
         const road = core('client');
         road.once(datatype, 'middlewareId');
-      }, /Path id needs to be a string containing only letters, numbers, - or */);
+      }, /Match id needs to be a string containing only letters, numbers, - or */);
     });
   datatypes
     .forEach(datatype => {
       test.throws(() => {
         const road = core('client');
-        road.once('pathId', datatype);
+        road.once('matchId', datatype);
       }, /Middleware id needs to be a string containing only letters and or numbers/);
     });
   test.end();
