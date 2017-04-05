@@ -1,9 +1,9 @@
 const check     = require('check-types');
-const flat      = require('flat');
 
 module.exports = (environmentId, options = {}) => {
   const defaultUpdateType     = 'default';
   let resetAfterCycle         = true;
+  let traditional             = [];
   let uniqueValues            = [];
   let stack                   = [];
   let extensions              = {};
@@ -54,13 +54,21 @@ module.exports = (environmentId, options = {}) => {
     return exposed;
   }
 
-  function middleware(newMiddleware) {
-    check.assert.zero(arguments.length - 1, 'Middleware needs exactly one argument');
+  function middleware(newMiddleware, ...traditionals) {
     check.assert.nonEmptyObject(newMiddleware, 'Provided middleware needs to be a non empty object');
-    newMiddleware = flat(newMiddleware);
     Object.keys(newMiddleware).forEach(id => {
       check.assert.not.assigned(availableMiddleware[id], `"${ id }" has already been defined as middleware`);
+      check.assert.function(newMiddleware[id], `"${ id }" middleware is not a function`);
     });
+    if (traditionals.length) {
+      check.assert.array.of.string(traditionals, 'All traditional middleware names need to be strings');
+      traditionals
+        .forEach((id, index) => {
+          check.assert.equal(traditionals.indexOf(id), index, `Duplicate values found for traditional middleware "${ id }"`);
+          check.assert.equal(traditional.indexOf(id), -1, `"${ id }" has already been defined as a traditional middleware function`);
+        });
+      traditional = [...traditional, ...traditionals];
+    }
     availableMiddleware = Object.assign({}, availableMiddleware, newMiddleware);
     return exposed;
   }
@@ -224,7 +232,8 @@ module.exports = (environmentId, options = {}) => {
     } else {
       stack = [...stack, ...environments[environmentId].noMatch];
       if (!environments[environmentId].noMatch.length) {
-        console.warn('No matches found and also no "noMatch" middleware present');
+        console.warn(`No matches found for "${ options.matchValue ? options.matchValue : options.matchId}"`);
+        console.warn(`noMatches hook has not been defined`);
       }
     }
 
@@ -241,7 +250,11 @@ module.exports = (environmentId, options = {}) => {
         return function(defined = {}) {
           check.assert.object(defined, 'Relay additions need to be an object');
           relay = Object.assign({}, relay, defined)
-          availableMiddleware[middleware.id]((stack.length < 1 ? () => {} : thunkify(stack.shift())), relay, ...parameters);
+          if (traditional.indexOf(middleware.id) > -1) {
+            availableMiddleware[middleware.id](...parameters, (stack.length < 1 ? () => {} : thunkify(stack.shift())));
+          } else {
+            availableMiddleware[middleware.id]((stack.length < 1 ? () => {} : thunkify(stack.shift())), relay, ...parameters);
+          }
         }
       } else {
         return () => {};

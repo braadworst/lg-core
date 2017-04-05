@@ -22,7 +22,7 @@ tape('Empty throws: middleware', test => {
   test.throws(() => {
     const road = core('client');
     road.middleware();
-  }, /Middleware needs exactly one argument/);
+  }, /Provided middleware needs to be a non empty object/);
   test.end();
 });
 
