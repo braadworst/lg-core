@@ -38,7 +38,7 @@ module.exports = (environmentId, options = {}) => {
     done
   };
 
-  const stringPattern = /^[a-z0-9]+$/i;
+  const stringPattern = /^[a-z0-9\.]+$/i;
 
   environment(environmentId);
 
