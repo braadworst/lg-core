@@ -74,7 +74,7 @@ tape('Datatypes invalid throws: run', test => {
       test.throws(() => {
         const road = core('client');
         road.run('matchId', datatype);
-      }, /Middleware id needs to be a string containing only letters and or numbers/);
+      }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
     });
   test.end();
 });
@@ -92,7 +92,7 @@ tape('Datatypes invalid throws: runCustom', test => {
       test.throws(() => {
         const road = core('client');
         road.runCustom('matchId', datatype, 'updateType');
-      }, /Middleware id needs to be a string containing only letters and or numbers/);
+      }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
     });
   datatypes
     .forEach(datatype => {
@@ -117,7 +117,7 @@ tape('Datatypes invalid throws: once', test => {
       test.throws(() => {
         const road = core('client');
         road.once('matchId', datatype);
-      }, /Middleware id needs to be a string containing only letters and or numbers/);
+      }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
     });
   test.end();
 });
@@ -128,7 +128,7 @@ tape('Datatypes invalid throws: error', test => {
       test.throws(() => {
         const road = core('client');
         road.error(datatype);
-      }, /Middleware id needs to be a string containing only letters and or numbers/);
+      }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
     });
   test.end();
 });
@@ -139,7 +139,7 @@ tape('Datatypes invalid throws: noMatch', test => {
       test.throws(() => {
         const road = core('client');
         road.noMatch(datatype);
-      }, /Middleware id needs to be a string containing only letters and or numbers/);
+      }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
     });
   test.end();
 });
@@ -150,7 +150,7 @@ tape('Datatypes invalid throws: done', test => {
       test.throws(() => {
         const road = core('client');
         road.done(datatype);
-      }, /Middleware id needs to be a string containing only letters and or numbers/);
+      }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
     });
   test.end();
 });

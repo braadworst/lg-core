@@ -69,7 +69,7 @@ tape('String patters throws: run', test => {
     test.throws(() => {
       const road = core('client');
       road.run('matchId', fail);
-    }, /Middleware id needs to be a string containing only letters and or numbers/);
+    }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
   });
   test.end();
 });
@@ -96,7 +96,7 @@ tape('String patters throws: runCustom', test => {
     test.throws(() => {
       const road = core('client');
       road.runCustom('matchId', fail, 'updateType');
-    }, /Middleware id needs to be a string containing only letters and or numbers/);
+    }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
   });
 
   fails.forEach(fail => {
@@ -130,7 +130,7 @@ tape('String patters throws: once', test => {
     test.throws(() => {
       const road = core('client');
       road.once('matchId', fail);
-    }, /Middleware id needs to be a string containing only letters and or numbers/);
+    }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
   });
   test.end();
 });
@@ -140,7 +140,7 @@ tape('String patters throws: error', test => {
     test.throws(() => {
       const road = core('client');
       road.error(fail);
-    }, /Middleware id needs to be a string containing only letters and or numbers/);
+    }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
   });
   test.end();
 });
@@ -150,7 +150,7 @@ tape('String patters throws: noMatch', test => {
     test.throws(() => {
       const road = core('client');
       road.noMatch(fail);
-    }, /Middleware id needs to be a string containing only letters and or numbers/);
+    }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
   });
   test.end();
 });
@@ -160,7 +160,7 @@ tape('String patters throws: done', test => {
     test.throws(() => {
       const road = core('client');
       road.done(fail);
-    }, /Middleware id needs to be a string containing only letters and or numbers/);
+    }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
   });
   test.end();
 });

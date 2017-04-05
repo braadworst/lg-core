@@ -34,6 +34,36 @@ const notObject = (next, relay, request, response) => {
   next(true);
 };
 
+tape('Adding unknown environment', test => {
+  const server = http.createServer();
+  const router = require('lr-server-router')(server);
+  const done   = (next, relay, request, response) => {
+    test.equal(true, true);
+    test.end();
+    response.end();
+  };
+
+  let road = core('webserver')
+    .extension('router', router, true)
+    .middleware({ done })
+    .where('client')
+    .where('webserver')
+    .done('done');
+
+  server.listen(4011, function() {});
+  http.get('http://localhost:4011', response => {
+    server.close();
+  });
+});
+
+tape('Adding * middleware without match defined should throw', test => {
+  test.throws(() => {
+    core('client')
+      .run('*', 'testMiddleware')
+  }, /Define a match before using a wildcard/);
+  test.end();
+});
+
 tape('Middleware matching: update by id', test => {
   const server = http.createServer();
   const router = require('lr-server-router')(server);
