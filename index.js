@@ -92,56 +92,58 @@ module.exports = (environmentId, options = {}) => {
     check.assert.match(middlewareId, /^[a-z0-9\.]+$/i, 'Middleware id needs to be a string containing only letters,numbers and an optional "."');
     check.assert.match(updateType, /^[a-z0-9]+$/i, 'Update type needs to be a string containing only letters and or numbers');
     selectedEnvironmentIds.forEach(environmentId => {
-      environments[environmentId].middleware.push({ matchValue, id : middlewareId, updateType });
+      environments[environmentId].middleware.push({ matchValue, id : middlewareId, updateType : updateType.toLowerCase() });
     });
     return exposed;
   }
 
-  function error(middlewareId) {
+  function error(middlewareId, updateType = defaultUpdateType) {
     check.assert.zero(arguments.length - 1, 'Error needs exactly one argument');
     check.assert.match(middlewareId, /^[a-z0-9\.]+$/i, 'Middleware id needs to be a string containing only letters,numbers and an optional "."');
-    selectedEnvironmentIds.forEach(id => environments[id].error.push({ id : middlewareId }));
+    selectedEnvironmentIds.forEach(id => environments[id].error.push({ id : middlewareId, updateType }));
     return exposed;
   }
 
-  function noMatch(middlewareId) {
+  function noMatch(middlewareId, updateType = defaultUpdateType) {
     check.assert.zero(arguments.length - 1, 'NoMatch needs exactly one argument');
     check.assert.match(middlewareId, /^[a-z0-9\.]+$/i, 'Middleware id needs to be a string containing only letters,numbers and an optional "."');
-    selectedEnvironmentIds.forEach(id => environments[id].noMatch.push({ id : middlewareId }));
+    selectedEnvironmentIds.forEach(id => environments[id].noMatch.push({ id : middlewareId, updateType }));
     return exposed;
   }
 
-  function done(middlewareId) {
+  function done(middlewareId, updateType = defaultUpdateType) {
     check.assert.zero(arguments.length - 1, 'Done needs exactly one argument');
     check.assert.match(middlewareId, /^[a-z0-9\.]+$/i, 'Middleware id needs to be a string containing only letters,numbers and an optional "."');
-    selectedEnvironmentIds.forEach(id => environments[id].done.push({ id : middlewareId }));
+    selectedEnvironmentIds.forEach(id => environments[id].done.push({ id : middlewareId, updateType }));
     return exposed;
   }
 
-  function update(options, ...middlewareParameters) {
+  function update(options, ...parameters) {
     check.assert.assigned(options.matchValue, 'Update function cannot find a matchValue');
-    ({ path, parameters } = parser.parse(options.matchValue));
+    const matchValue      = parser.parse(options.matchValue);
     const updateType      = options.updateType ? options.updateType.toLowerCase() : defaultUpdateType;
     relay                 = setRelay();
-    relay.parameters      = parameters;
+    relay.parameters      = matchValue.parameters;
     const environment     = environments[executingEnvironmentId];
     let middleware        = environment.middleware
-      .filter(record => record.matchValue === path || record.matchValue === '*')
+      .filter(record => record.matchValue === matchValue.path || record.matchValue === '*')
       .filter(record => record.updateType === updateType);
+    stack = [...stack, ...middleware];
 
-    if (middleware.length) {
-      stack = [...stack, ...middleware];
-    } else if (environment.noMatch.length > 0){
-      stack = [...stack, ...environment.noMatch];
-    } else {
-      console.warn(`No matches found for "${ path }" and no middleware for "noMatches"`);
+    function addNoMatchMiddleware() {
+      stack = [...stack, ...environment.noMatch.filter(middleware => middleware.updateType === updateType)];
     }
 
-    if (environment.done.length > 0) {
-      stack = [...stack, ...environment.done];
-    } else {
-      console.warn('There has been no middleware assigned to the done hook');
+    function addDoneMiddleware() {
+      stack = [...stack, ...environment.done.filter(middleware => middleware.updateType === updateType)];
     }
+
+    function addErrorMiddleware() {
+      stack = [...stack, ...environment.error.filter(middleware => middleware.updateType === updateType)];
+    }
+
+    if (middleware.length === 0) { addNoMatchMiddleware(); }
+    addDoneMiddleware();
 
     function thunkify(record) {
       const id       = record.id;
@@ -153,21 +155,24 @@ module.exports = (environmentId, options = {}) => {
         relay = Object.assign({}, relay, defined);
         const next = stack.length < 1 ? () => {} : thunkify(stack.shift());
         if (traditional.indexOf(id) > -1) {
-          callback(...middlewareParameters, next);
+          callback(...parameters, next);
         } else {
-          callback(next, relay, ...middlewareParameters);
+          callback(next, relay, ...parameters);
         }
       }
     }
 
     try {
-      thunkify(stack.shift())(relay);
-    } catch (error) {
-      if (environment.error.length < 1) {
-        console.warn('Error running the middleware stack, but no error hook found');
+      if (stack.length > 0) {
+        thunkify(stack.shift())(relay);
+      } else {
+        console.warn(`No middleware found for current update cycle matchValue: ${ matchValue.path }, updateType: ${ updateType }`);
       }
+    } catch (error) {
+      stack = [];
+      addErrorMiddleware();
+      addDoneMiddleware();
       relay.error = error;
-      stack = [...environment.error, ...environment.done];
       thunkify(stack.shift())(relay);
     }
   }

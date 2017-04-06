@@ -179,7 +179,6 @@ tape('Update without type', test => {
   const server  = http.createServer();
 
   let done = (next, relay) => {
-    console.log(next.toString());
     next();
     test.equal(true, true);
     test.end();
@@ -189,4 +188,15 @@ tape('Update without type', test => {
     .middleware({ done })
     .run('/other', 'done')
     .update({ matchValue : '/other' })
+});
+
+tape('Update without middleware', test => {
+
+  const server  = http.createServer();
+
+  let road = core('webserver')
+    .update({ matchValue : '/other' });
+
+  test.equal(true, true);
+  test.end();
 });
