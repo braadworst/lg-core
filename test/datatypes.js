@@ -43,80 +43,19 @@ tape('Datatypes invalid throws: where', test => {
   test.end();
 });
 
-tape('Datatypes invalid throws: match', test => {
-  datatypes
-    .forEach(datatype => {
-      test.throws(() => {
-        const road = core('client');
-        road.match(datatype, 'matchId');
-      }, /Match id needs to be a string containing only letters and or numbers/);
-    });
-  datatypes
-    .forEach(datatype => {
-      test.throws(() => {
-        const road = core('client');
-        road.match('matchId', datatype);
-      }, /All match values need to be strings/);
-    });
-  test.end();
-});
-
 tape('Datatypes invalid throws: run', test => {
   datatypes
     .forEach(datatype => {
       test.throws(() => {
         const road = core('client');
         road.run(datatype, 'middlewareId');
-      }, /Match id needs to be a string containing only letters, numbers, - or */);
+      }, /Match value needs to be a string/);
     });
   datatypes
     .forEach(datatype => {
       test.throws(() => {
         const road = core('client');
-        road.run('matchId', datatype);
-      }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
-    });
-  test.end();
-});
-
-tape('Datatypes invalid throws: runCustom', test => {
-  datatypes
-    .forEach(datatype => {
-      test.throws(() => {
-        const road = core('client');
-        road.runCustom(datatype, 'middlewareId', 'updateType');
-      }, /Match id needs to be a string containing only letters, numbers, - or */);
-    });
-  datatypes
-    .forEach(datatype => {
-      test.throws(() => {
-        const road = core('client');
-        road.runCustom('matchId', datatype, 'updateType');
-      }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
-    });
-  datatypes
-    .forEach(datatype => {
-      test.throws(() => {
-        const road = core('client');
-        road.runCustom('matchId', 'middlewareId', datatype);
-      }, /Update type needs to be a string containing only letters and or numbers/);
-    });
-  test.end();
-});
-
-tape('Datatypes invalid throws: once', test => {
-  datatypes
-    .forEach(datatype => {
-      test.throws(() => {
-        const road = core('client');
-        road.once(datatype, 'middlewareId');
-      }, /Match id needs to be a string containing only letters, numbers, - or */);
-    });
-  datatypes
-    .forEach(datatype => {
-      test.throws(() => {
-        const road = core('client');
-        road.once('matchId', datatype);
+        road.run('matchValue', datatype);
       }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
     });
   test.end();

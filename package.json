@@ -24,8 +24,7 @@
   ],
   "homepage": "https://github.com/lagoon-road/lr-core#readme",
   "dependencies": {
-    "check-types": "^7.1.5",
-    "flat": "^2.0.1"
+    "check-types": "^7.1.5"
   },
   "devDependencies": {
     "coveralls": "^2.13.0",

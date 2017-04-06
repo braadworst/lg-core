@@ -34,54 +34,14 @@ tape('Empty throws: where', test => {
   test.end();
 });
 
-tape('Empty throws: match', test => {
-  test.throws(() => {
-    const road = core('client');
-    road.match();
-  }, /Match id cannot be empty/);
-  test.throws(() => {
-    const road = core('client');
-    road.match('matchId');
-  }, /Please provide at least one value for your match/);
-  test.end();
-});
-
 tape('Empty throws: run', test => {
   test.throws(() => {
     const road = core('client');
     road.run();
-  }, /Match id cannot be empty/);
+  }, /Match value cannot be empty/);
   test.throws(() => {
     const road = core('client');
     road.run('matchId');
-  }, /Middleware id cannot be empty/);
-  test.end();
-});
-
-tape('Empty throws: runCustom', test => {
-  test.throws(() => {
-    const road = core('client');
-    road.runCustom();
-  }, /Match id cannot be empty/);
-  test.throws(() => {
-    const road = core('client');
-    road.runCustom('matchId');
-  }, /Middleware id cannot be empty/);
-  test.throws(() => {
-    const road = core('client');
-    road.runCustom('matchId', 'middlewareId');
-  }, /Update type cannot be empty/);
-  test.end();
-});
-
-tape('Empty throws: once', test => {
-  test.throws(() => {
-    const road = core('client');
-    road.once();
-  }, /Match id cannot be empty/);
-  test.throws(() => {
-    const road = core('client');
-    road.once('matchId');
   }, /Middleware id cannot be empty/);
   test.end();
 });

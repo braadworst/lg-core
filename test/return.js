@@ -21,26 +21,6 @@ tape('Return object: where', test => {
   test.end();
 });
 
-tape('Return object: match', test => {
-  test.equal(typeof core('client').match('home', '/'), 'object');
-  test.end();
-});
-
-tape('Return object: run', test => {
-  test.equal(typeof core('client').match('home', '/').run('home', 'something'), 'object');
-  test.end();
-});
-
-tape('Return object: runCustom', test => {
-  test.equal(typeof core('client').match('home', '/').runCustom('home', 'something', 'get'), 'object');
-  test.end();
-});
-
-tape('Return object: once', test => {
-  test.equal(typeof core('client').match('home', '/').once('home', 'something'), 'object');
-  test.end();
-});
-
 tape('Return object: error', test => {
   test.equal(typeof core('client').error('something'), 'object');
   test.end();
