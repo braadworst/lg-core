@@ -1,4 +1,4 @@
-const check     = require('check-types');
+const check = require('check-types');
 
 module.exports = (environmentId, options = {}) => {
   const defaultUpdateType     = 'get';
@@ -153,7 +153,7 @@ module.exports = (environmentId, options = {}) => {
       return function(defined = {}) {
         check.assert.object(defined, 'Relay additions need to be an object');
         relay = Object.assign({}, relay, defined);
-        const next = stack.length < 1 ? () => {} : thunkify(stack.shift());
+        const next = (stack.length === 0) ? () => {} : thunkify(stack.shift());
         if (traditional.indexOf(id) > -1) {
           callback(...parameters, next);
         } else {
@@ -173,7 +173,12 @@ module.exports = (environmentId, options = {}) => {
       addErrorMiddleware();
       addDoneMiddleware();
       relay.error = error;
-      thunkify(stack.shift())(relay);
+      if (stack.length > 0) {
+        thunkify(stack.shift())(relay);
+      } else {
+        console.error(`Error but no middleware found, path: ${ matchValue.path }, updateType: ${ updateType }`);
+        console.error(error);
+      }
     }
   }
   return exposed;
