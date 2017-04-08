@@ -6,7 +6,7 @@ The _lr-core_ package is the only mandatory package for Lagoon road. This packag
 | ----------- | - |
 | Code coverage | [![Coverage Status](https://coveralls.io/repos/github/lagoon-road/lr-core/badge.svg?branch=master)](https://coveralls.io/github/lagoon-road/lr-core?branch=master) |
 | Repo link | [lr-core](https://github.com/lagoon-road/lr-core) |
-| Dependencies | [check-types](https://www.npmjs.com/package/check-types) |
+| Dependencies | [check-types](https://github.com/philbooth/check-types.js), [lr-url-parser](https://github.com/lagoon-road/lr-url-parser) |
 | Size (Browserify, Babel, Uglify and Gzip)| 5.3KB |
 | Version | 1.0.0 |
 | License | MIT |
