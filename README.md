@@ -46,7 +46,7 @@ Tell the core if on initialization the extension needs to be executed. This is t
 > Extensions can be used in middleware via the relay object.
 > ```
 > module.exports = (next, relay) => {
->  console.log(relay.extensions.extensionName);
+>   console.log(relay.extensions.extensionName);
 >   next();
 > }
 >```
@@ -101,7 +101,7 @@ The update type is an extra layer for matching middleware, if we use a http prot
 
 ---
 
-### road.error(middlewareId:string, [updateType:string])
+### road.error(middlewareId, [updateType])
 
 ```
 road.error('log')
@@ -117,13 +117,13 @@ The update type is an extra layer for matching middleware, if we use a http prot
 
 ---
 
-### road.noMatch(middlewareId:string, [updateType:string])
+### road.noMatch(middlewareId, [updateType])
 
 ```
 road.noMatch('log');
 ```
 
-_When no middleware could be found for a current combination of `matchValue` and `updateType`, the `noMatch` middleware will be called, this is handy if you want to return a 404 page or something similar.`_
+_When no middleware could be found for a current combination of `matchValue` and `updateType`, the `noMatch` middleware will be called, this is handy if you want to return a 404 page or something similar._
 
 **middlewareId:string**  
 Identifier you added by using the `middleware` method. It needs to be a string and should match to a middleware function, otherwise it will throw.
@@ -133,7 +133,7 @@ The update type is an extra layer for matching middleware, if we use a http prot
 
 ---
 
-### road.done(middlewareId:string, [updateType:string])
+### road.done(middlewareId, [updateType])
 
 ```
 road.done('response', 'post');
@@ -152,5 +152,18 @@ The update type is an extra layer for matching middleware, if we use a http prot
 ### road.update(options:object, [...parameters])
 
 ```
-road.update({ matchValue : '/somepath', updateType : 'post' })
+road.update({ matchValue : '/somepath', updateType : 'post' }, parameterOne, parameterTwo);
 ```
+_Manually trigger an upadte cycle to the road by calling the `update` method._
+
+**options.matchValue:string**  
+A match value in most webapps can be thought of as an url path, but it is not limited to paths only. Frankly it can be any string you can think of, even a JSON string to match on JSON content. Or in an even more exotic example you can match Raspberry pie sensor outputs via an extension to string values and let that trigger middleware. You can use the `*` as a wildcard to match on all match values that might come in.
+
+**options.updateType:string**  
+The update type is an extra layer for matching middleware, if we use a http protocol to update the road, this will be the method for the request. By default it wil be `GET` because it is the most common, but it can be overwritten to be something else. Again you are not limited to http methods, it fully depends on what an extension sends out via an update event.
+
+**parameters:\***  
+Each update can be have custom parameters that will be available as middleware arguments. This could be for example the `request` and `response` object on a router update.
+
+> Read more about parameters in the [middleware](https://lagoonroad.com/guide#middleware) section.
+> Every time a update method is called the middleware that matches will be added to the stack of middleware that needs to be executed. So when calling this on the server you might send out a response and afterwards more middleware will be called. Therefore use it on the client mainly to initialize events. Make sure you fully understand the middelware stack before start using the update function nilly willy
