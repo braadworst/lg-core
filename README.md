@@ -1,5 +1,5 @@
 # lg-core reference
-Information | |
+Information | - |
 - | -
 Code coverage | [![Coverage Status](https://coveralls.io/repos/github/lagoon-road/lr-core/badge.svg?branch=master)](https://coveralls.io/github/lagoon-road/lr-core?branch=master)
 Repo link | [lr-core](https://github.com/lagoon-road/lr-core)
