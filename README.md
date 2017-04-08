@@ -12,6 +12,8 @@ The _lr-core_ package is the only mandatory package for Lagoon road. This packag
 | License | MIT |
 | Usage | [lagoonroad.com/guide](https://www.lagoonroad.com/guide) |
 
+---
+
 ### core(environmentId:string, [options:object])
 
 ```
@@ -68,11 +70,18 @@ Middleware methods can be called multiple times, the middleware will all be adde
 > ```
 > Read more about how to define and use middleware in the [guide](https://lagoonroad.com/guide#middleware).
 
+---
+
 ### road.where(environmentId:string, [...environmentId:String])
 
 ```
 road.where('webserver', 'client');
 ```
+When assigning middleware to the road you might want to switch the environment they need to be assigned to. You can do that by using the where method.
+
+The where method expects at least one argument, which should be a string. This is an environment id to which all the following middleware will be assigned. If you want to assign middleware to multiple environments you can just specify several ids like in the example above.
+
+---
 
 ### road.run(matchValue:string, middlewareId:string, [updateType:string])
 
