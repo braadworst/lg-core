@@ -83,11 +83,22 @@ The where method expects at least one argument, which should be a string. This i
 
 ---
 
-### road.run(matchValue:string, middlewareId:string, [updateType:string])
+### road.run(matchValue, middlewareId, [matchValue])
 
 ```
 road.run('*', 'log');
 ```
+
+**matchValue:string**  
+A match value in most webapps can be thought of as an url path, but it is not limited to paths only. Frankly it can be any string you can think of, even a JSON string to match on JSON content. Or in an even more exotic example you can match Raspberry pie sensor outputs via an extension to string values and let that trigger middleware.
+
+** middlewareId:string**  
+Identifier you added by using the `middleware` method. It needs to be a string and should match to a middleware, otherwise it will throw.
+
+**[updateType:string]**  
+The update type is an extra layer for matching middleware, if we use a http protocol to update the road, this will be the method for the request. By default it wil be `GET` because it is the most common, but it can be overwritten to be something else. Again you are not limited to http methods, it fully depends on what an extension sends out via an update event.
+
+---
 
 ### road.error(middlewareId:string, [updateType:string])
 
