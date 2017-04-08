@@ -12,83 +12,66 @@ The _lr-core_ package is the only mandatory package for Lagoon road. This packag
 | License | MIT |
 | Usage | [lagoonroad.com/guide](https://www.lagoonroad.com/guide) |
 
-### core(executingEnvironmentId:string, [options:object])
+### core(environmentId:string, [options:object])
 
 ```
 const core = require('lr-core');
 const road = core('webserver');
 ```
+When initiating an new road you have to supply one mandatory argument, the environment id. This will be the environment that is the executing environment.
+
+There is also an optional options object where you can specify some settings, they keys of the object are as follows:
+
+##### options.parser:object
+The parser to use when handling the _matchValue_. Read more about parsers in the [guide](https://lagoonroad.com/guide#parsers).
+
+##### options.resetAfterCycle:boolean
+By default the relay object gets cleared after an update of the road, sometimes, mainly on the client, you want to keep the relay populated even if an update event has ran. To do so, you can set this boolean to  _false_
 
 ### road.extension(id:string, extension:*, isUpdater:boolean = false)
 
 ```
-const router = require('lr-client-router')
-const core   = require('lr-core');
-const road   = core('client')
-  .extension('router', router, true);
+road.extension('router', router, true);
 ```
 
 ### road.middleware(newMiddleware:object)
 
 ```
-const bodyParser = require('body-parser');
-const core       = require('lr-core');
-const road       = core('webserver')
-  .middleware({ bodyParser }, 'bodyParser');
+road.middleware({ bodyParser }, 'bodyParser');
 ```
 
 ### road.where(environmentId:string, [...environmentId:String])
 
 ```
-const core = require('lr-core');
-const road = core('webserver')
-  .where('webserver', 'client');
+road.where('webserver', 'client');
 ```
 
 ### road.run(matchValue:string, middlewareId:string, [updateType:string])
 
 ```
-const log  = require('log');
-const core = require('lr-core');
-const road = core('webserver')
-  .middleware({ log })
-  .run('*', 'log')
+road.run('*', 'log');
 ```
 
 ### road.error(middlewareId:string, [updateType:string])
 
 ```
-const log  = require('log');
-const core = require('lr-core');
-const road = core('webserver')
-  .middleware({ log })
-  .error('log')
+road.error('log')
 ```
 
 ### road.noMatch(middlewareId:string, [updateType:string])
 
 ```
-const log  = require('log');
-const core = require('lr-core');
-const road = core('webserver')
-  .middleware({ log })
-  .noMatch('log');
+road.noMatch('log');
 ```
 
 ### road.done(middlewareId:string, [updateType:string])
 
 ```
-const response = require('response');
-const core     = require('lr-core');
-const road     = core('webserver')
-  .middleware({ response })
-  .done('response', 'post');
+road.done('response', 'post');
 ```
 
 ### road.update(options:object, [...parameters])
 
 ```
-const core     = require('lr-core');
-const road     = core('webserver')
-  .update({ matchValue : '/somepath', updateType : 'post' })
+road.update({ matchValue : '/somepath', updateType : 'post' })
 ```
