@@ -122,7 +122,7 @@ The update type is an extra layer for matching middleware, if we use a http prot
 road.noMatch('log');
 ```
 
-_When no middleware could be found for a current combination of `matchValue` and `updateType`, the `noMatch middleware will be called, this is handy if you want to return a 404 page or something similar.`_
+_When no middleware could be found for a current combination of `matchValue` and `updateType`, the `noMatch' middleware will be called, this is handy if you want to return a 404 page or something similar.`_
 
 **middlewareId:string**  
 Identifier you added by using the `middleware` method. It needs to be a string and should match to a middleware function, otherwise it will throw.
@@ -138,7 +138,7 @@ The update type is an extra layer for matching middleware, if we use a http prot
 road.done('response', 'post');
 ```
 
-_The done method is called as the last method in the stack, it is typically used to render output (html or json) to a client_
+_The `done` method is called as the last method in the stack, it is typically used to render output (html or json) to a client_
 
 **middlewareId:string**  
 Identifier you added by using the `middleware` method. It needs to be a string and should match to a middleware function, otherwise it will throw.
