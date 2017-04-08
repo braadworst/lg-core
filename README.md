@@ -166,4 +166,4 @@ The update type is an extra layer for matching middleware, if we use a http prot
 Each update can be have custom parameters that will be available as middleware arguments. This could be for example the `request` and `response` object on a router update.
 
 > Read more about parameters in the [middleware](https://lagoonroad.com/guide#middleware) section.
-> Every time a update method is called the middleware that matches will be added to the stack of middleware that needs to be executed. So when calling this on the server you might send out a response and afterwards more middleware will be called. Therefore use it on the client mainly to initialize events. Make sure you fully understand the middelware stack before start using the update function nilly willy
+> Every time a update method is called the middleware that matches will be added to the stack of middleware that needs to be executed. So when calling this on the server you might send out a response and afterwards more middleware will be called. Therefore use it on the client mainly to initialize events. Make sure you fully understand the middelware stack before start using the update function.
