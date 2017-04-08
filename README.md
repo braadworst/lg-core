@@ -90,10 +90,10 @@ road.run('*', 'log');
 ```
 
 **matchValue:string**  
-A match value in most webapps can be thought of as an url path, but it is not limited to paths only. Frankly it can be any string you can think of, even a JSON string to match on JSON content. Or in an even more exotic example you can match Raspberry pie sensor outputs via an extension to string values and let that trigger middleware.
+A match value in most webapps can be thought of as an url path, but it is not limited to paths only. Frankly it can be any string you can think of, even a JSON string to match on JSON content. Or in an even more exotic example you can match Raspberry pie sensor outputs via an extension to string values and let that trigger middleware. You can use the `*` as a wildcard to match on all match values that might come in.
 
 **middlewareId:string**  
-Identifier you added by using the `middleware` method. It needs to be a string and should match to a middleware, otherwise it will throw.
+Identifier you added by using the `middleware` method. It needs to be a string and should match to a middleware function, otherwise it will throw.
 
 **[updateType:string]**  
 The update type is an extra layer for matching middleware, if we use a http protocol to update the road, this will be the method for the request. By default it wil be `GET` because it is the most common, but it can be overwritten to be something else. Again you are not limited to http methods, it fully depends on what an extension sends out via an update event.
@@ -106,17 +106,47 @@ The update type is an extra layer for matching middleware, if we use a http prot
 road.error('log')
 ```
 
+_Whenever the stack of middleware that is updated throws an error, it will be redirected to error middleware. You can use it to render alternative content or log the errors. The `relay` object will have a new property `relay.error` with the error message._
+
+**middlewareId:string**  
+Identifier you added by using the `middleware` method. It needs to be a string and should match to a middleware function, otherwise it will throw.
+
+**[updateType:string]**  
+The update type is an extra layer for matching middleware, if we use a http protocol to update the road, this will be the method for the request. By default it wil be `GET` because it is the most common, but it can be overwritten to be something else. Again you are not limited to http methods, it fully depends on what an extension sends out via an update event.
+
+---
+
 ### road.noMatch(middlewareId:string, [updateType:string])
 
 ```
 road.noMatch('log');
 ```
 
+_When no middleware could be found for a current combination of `matchValue` and `updateType`, the `noMatch middleware will be called, this is handy if you want to return a 404 page or something similar.`_
+
+**middlewareId:string**  
+Identifier you added by using the `middleware` method. It needs to be a string and should match to a middleware function, otherwise it will throw.
+
+**[updateType:string]**  
+The update type is an extra layer for matching middleware, if we use a http protocol to update the road, this will be the method for the request. By default it wil be `GET` because it is the most common, but it can be overwritten to be something else. Again you are not limited to http methods, it fully depends on what an extension sends out via an update event.
+
+---
+
 ### road.done(middlewareId:string, [updateType:string])
 
 ```
 road.done('response', 'post');
 ```
+
+_The done method is called as the last method in the stack, it is typically used to render output (html or json) to a client_
+
+**middlewareId:string**  
+Identifier you added by using the `middleware` method. It needs to be a string and should match to a middleware function, otherwise it will throw.
+
+**[updateType:string]**  
+The update type is an extra layer for matching middleware, if we use a http protocol to update the road, this will be the method for the request. By default it wil be `GET` because it is the most common, but it can be overwritten to be something else. Again you are not limited to http methods, it fully depends on what an extension sends out via an update event.
+
+---
 
 ### road.update(options:object, [...parameters])
 
