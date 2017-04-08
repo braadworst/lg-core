@@ -92,7 +92,7 @@ road.run('*', 'log');
 **matchValue:string**  
 A match value in most webapps can be thought of as an url path, but it is not limited to paths only. Frankly it can be any string you can think of, even a JSON string to match on JSON content. Or in an even more exotic example you can match Raspberry pie sensor outputs via an extension to string values and let that trigger middleware.
 
-** middlewareId:string**  
+**middlewareId:string**  
 Identifier you added by using the `middleware` method. It needs to be a string and should match to a middleware, otherwise it will throw.
 
 **[updateType:string]**  
