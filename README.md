@@ -26,13 +26,25 @@ There is also an optional options object where you can specify some settings, th
 The parser to use when handling the _matchValue_. Read more about parsers in the [guide](https://lagoonroad.com/guide#parsers).
 
 ##### options.resetAfterCycle:boolean
-By default the relay object gets cleared after an update of the road, sometimes, mainly on the client, you want to keep the relay populated even if an update event has ran. To do so, you can set this boolean to  _false_
+By default the relay object gets cleared after an update cycle of the road, sometimes, mainly on the client, you want to keep the relay populated even if an update cycle has ran. To do so, you can set this boolean to  _false_
 
 ### road.extension(id:string, extension:*, isUpdater:boolean = false)
 
 ```
 road.extension('router', router, true);
 ```
+Use the extension method to add new extensions to the road. You need two mandatory arguments to add an extension. Firstly you have to supply an id that you can use to access the extension in all the middleware. Secondly the actual extension code. This can be anything you like.
+
+The third optional argument is a boolean value to tell the core if on initialization the extension needs to be executed. This is typically for extensions that use update events to trigger updates to the road. Read [more information](https://lagoonroad.com/guide#extensions) about extensions in the guide.
+
+Extensions can be used in middleware via the relay object.
+```
+module.exports = (next, relay) => {
+  console.log(relay.extensions.extensionName);
+  next();
+}
+```
+
 
 ### road.middleware(newMiddleware:object)
 
