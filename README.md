@@ -12,7 +12,7 @@ The _lr-core_ package is the only mandatory package for Lagoon road. This packag
 | License | MIT |
 | Usage | [lagoonroad.com/guide](https://www.lagoonroad.com/guide) |
 
-## core(environmentId:string, [options:object])
+### core(environmentId:string, [options:object])
 
 ```
 const core = require('lr-core');
@@ -30,7 +30,7 @@ By default the relay object gets cleared after an update cycle of the road, some
 
 ---
 
-## road.extension(id:string, extension:*, isUpdater:boolean = false)
+### road.extension(id:string, extension:*, isUpdater:boolean = false)
 
 ```
 road.extension('router', router, true);
@@ -49,43 +49,56 @@ The third optional argument is a boolean value to tell the core if on initializa
 
 ---
 
-## road.middleware(newMiddleware:object)
+### road.middleware(newMiddleware:object)
 
 ```
 road.middleware({ bodyParser }, 'bodyParser');
 ```
 
-## road.where(environmentId:string, [...environmentId:String])
+You can add middleware to the road by using the middleware method. It needs a single argument that is an object with all the middleware you want to use. This is a single depth object so don't use any nested structures.
+
+Middleware methods can be called multiple times, the middleware will all be added to a single object within the core. Therefore you need to supply unique ids/keys.
+
+> If you have a multitude of middleware functions that you  want to use it might be handy to use a dot notation to  group your middleware.
+> ```
+> road.middleware({
+>   'templating.component.navigation' : require('...'),  
+>   'templating.component.home'       : require('...'),  
+> });
+> ```
+> Read more about how to define and use middleware in the [guide](https://lagoonroad.com/guide#middleware).
+
+### road.where(environmentId:string, [...environmentId:String])
 
 ```
 road.where('webserver', 'client');
 ```
 
-## road.run(matchValue:string, middlewareId:string, [updateType:string])
+### road.run(matchValue:string, middlewareId:string, [updateType:string])
 
 ```
 road.run('*', 'log');
 ```
 
-## road.error(middlewareId:string, [updateType:string])
+### road.error(middlewareId:string, [updateType:string])
 
 ```
 road.error('log')
 ```
 
-## road.noMatch(middlewareId:string, [updateType:string])
+### road.noMatch(middlewareId:string, [updateType:string])
 
 ```
 road.noMatch('log');
 ```
 
-## road.done(middlewareId:string, [updateType:string])
+### road.done(middlewareId:string, [updateType:string])
 
 ```
 road.done('response', 'post');
 ```
 
-## road.update(options:object, [...parameters])
+### road.update(options:object, [...parameters])
 
 ```
 road.update({ matchValue : '/somepath', updateType : 'post' })
