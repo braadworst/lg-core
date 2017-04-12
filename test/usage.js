@@ -294,3 +294,63 @@ tape('Update without type', test => {
     .update({ matchValue : '/' })
     .update({ matchValue : '/' })
 });
+
+tape('Multiple error', test => {
+
+  const server  = http.createServer();
+
+  let done = (next, relay) => {
+    next();
+    test.equal(relay.error, true);
+    test.end();
+  };
+
+  let error = next => { next({ error : true }) };
+
+  let road = core('webserver')
+    .middleware({ done, error, cause })
+    .run('/', 'cause')
+    .error('error')
+    .error('error')
+    .done('done')
+    .update({ matchValue : '/' })
+});
+
+tape('Multiple done', test => {
+
+  const server  = http.createServer();
+
+  let done = (next, relay) => {
+    next();
+    test.equal(relay.error, true);
+    test.end();
+  };
+
+  let error = next => { next({ error : true }) };
+
+  let road = core('webserver')
+    .middleware({ done, error })
+    .done('error')
+    .done('done')
+    .update({ matchValue : '/' })
+});
+
+tape('Multiple error', test => {
+
+  const server  = http.createServer();
+
+  let done = (next, relay) => {
+    next();
+    test.equal(relay.error, true);
+    test.end();
+  };
+
+  let error = next => { next({ error : true }) };
+
+  let road = core('webserver')
+    .middleware({ done, error })
+    .noMatch('error')
+    .noMatch('error')
+    .done('done')
+    .update({ matchValue : '/' })
+});

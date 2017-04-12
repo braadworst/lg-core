@@ -12,7 +12,7 @@ module.exports = (environmentId, options = {}) => {
   let availableMiddleware     = {};
   let executingEnvironmentId  = environmentId;
   let selectedEnvironmentIds  = [environmentId];
-  let environments            = {};
+  let environments            = { [environmentId] : environment(environmentId) };
   const exposed               = { extension, middleware, where, run, error, noMatch, done, update, parser };
 
   if (options.resetAfterCycle !== undefined) {
@@ -20,12 +20,10 @@ module.exports = (environmentId, options = {}) => {
     resetAfterCycle = options.resetAfterCycle;
   }
 
-  environments[environmentId] = environment(environmentId);
-
   function environment(id) {
     check.assert.not.undefined(id, 'Environment id cannot be empty');
     check.assert.match(id, /^[a-z0-9]+$/i, 'Environment id needs to be a string containing only letters and or numbers');
-    return { id, matches : {}, middleware : [], noMatch : [], error : [], done : [] };
+    return { id, run : {}, noMatch : {}, error : {}, done : {} };
   }
 
   function parser(parser) {
@@ -83,8 +81,12 @@ module.exports = (environmentId, options = {}) => {
     check.assert.match(middlewareId, /^[a-z0-9\.]+$/i, 'Middleware id needs to be a string containing only letters,numbers and an optional "."');
     check.assert.match(updateType, /^[a-z0-9]+$/i, 'Update type needs to be a string containing only letters and or numbers');
     selectedParser.add(matchValue);
-    selectedEnvironmentIds.forEach(environmentId => {
-      environments[environmentId].middleware.push({ matchValue, id : middlewareId, updateType : updateType.toLowerCase() });
+    selectedEnvironmentIds.forEach(id => {
+      !environments[id].run[updateType]
+        ? environments[id].run[updateType] = { [ matchValue ] : [ middlewareId ] }
+        : !environments[id].run[updateType][matchValue]
+          ? environments[id].run[updateType][matchValue] = [middlewareId]
+          : environments[id].run[updateType][matchValue].push(middlewareId);
     });
     return exposed;
   }
@@ -92,21 +94,33 @@ module.exports = (environmentId, options = {}) => {
   function error(middlewareId, updateType = defaultUpdateType) {
     check.assert.zero(arguments.length - 1, 'Error needs exactly one argument');
     check.assert.match(middlewareId, /^[a-z0-9\.]+$/i, 'Middleware id needs to be a string containing only letters,numbers and an optional "."');
-    selectedEnvironmentIds.forEach(id => environments[id].error.push({ id : middlewareId, updateType }));
+    selectedEnvironmentIds.forEach(id => {
+      Array.isArray(environments[id].error[updateType])
+        ? environments[id].error[updateType].push(middlewareId)
+        : environments[id].error[updateType] = [middlewareId];
+    });
     return exposed;
   }
 
   function noMatch(middlewareId, updateType = defaultUpdateType) {
     check.assert.zero(arguments.length - 1, 'NoMatch needs exactly one argument');
     check.assert.match(middlewareId, /^[a-z0-9\.]+$/i, 'Middleware id needs to be a string containing only letters,numbers and an optional "."');
-    selectedEnvironmentIds.forEach(id => environments[id].noMatch.push({ id : middlewareId, updateType }));
+    selectedEnvironmentIds.forEach(id => {
+      Array.isArray(environments[id].noMatch[updateType])
+        ? environments[id].noMatch[updateType].push(middlewareId)
+        : environments[id].noMatch[updateType] = [middlewareId];
+    });
     return exposed;
   }
 
   function done(middlewareId, updateType = defaultUpdateType) {
     check.assert.zero(arguments.length - 1, 'Done needs exactly one argument');
     check.assert.match(middlewareId, /^[a-z0-9\.]+$/i, 'Middleware id needs to be a string containing only letters,numbers and an optional "."');
-    selectedEnvironmentIds.forEach(id => environments[id].done.push({ id : middlewareId, updateType }));
+    selectedEnvironmentIds.forEach(id => {
+      Array.isArray(environments[id].done[updateType])
+        ? environments[id].done[updateType].push(middlewareId)
+        : environments[id].done[updateType] = [middlewareId];
+    });
     return exposed;
   }
 
@@ -134,10 +148,8 @@ module.exports = (environmentId, options = {}) => {
   function runMiddlewareStack() {
     const update = updateStack.shift();
     if (update) {
-
-      function thunkifyMiddleware(currentMiddleware) {
-        if (!currentMiddleware) { return () => {} }
-        const id       = currentMiddleware.id;
+      function thunkifyMiddleware(id) {
+        if (!id) { return () => {} }
         const callback = availableMiddleware[id];
         check.assert.assigned(callback, `Middleware ${ id } not found`);
         check.assert.function(callback, 'Middleware needs to be a function');
@@ -159,38 +171,32 @@ module.exports = (environmentId, options = {}) => {
           if (middlewareStack.length === 0) { runMiddlewareStack(); }
         }
       }
-
-      function getMiddleware(type) {
-        let output;
-        const environment = environments[executingEnvironmentId];
-        if (type === 'match') {
-          output = environment.middleware
-            .filter(record => record.matchValue === matchValue.path || record.matchValue === '*')
-            .filter(record => record.updateType === updateType);
-        } else {
-          output = environment[type].filter(middleware => middleware.updateType === updateType);
-        }
-        if (output.length === 0 && (type === 'match' || type === 'error')) {
-          console.warn(`No ${ type === 'match' ? '' : '"' + type + '"'} middleware found for matchValue: ${ matchValue.path }, updateType: ${ updateType }`);
-        }
-        return output;
-      }
-
       check.assert.assigned(update.options.matchValue, 'Update function cannot find a matchValue');
-      const matchValue  = selectedParser.parse(update.options.matchValue);
+      let   matchValue  = selectedParser.parse(update.options.matchValue);
+      const parameters  = matchValue.parameters;
+            matchValue  = matchValue.path;
       const updateType  = update.options.updateType ? update.options.updateType.toLowerCase() : defaultUpdateType;
+      const environment = environments[executingEnvironmentId];
+      let   run         = (environment.run[updateType] && environment.run[updateType][matchValue]) ? environment.run[updateType][matchValue] : [];
+            run         = (environment.run[updateType] && environment.run[updateType]['*']) ? [...run, ...environment.run[updateType]['*']] : run;
+      const done        = environment.done[updateType] ? environment.done[updateType] : [];
+      const noMatch     = environment.noMatch[updateType] ? environment.noMatch[updateType] : [];
+      const error       = environment.error[updateType] ? environment.error[updateType] : [];
       try {
-        prepareRelay({ parameters : matchValue.parameters });
-        middlewareStack = getMiddleware('match');
-        if (middlewareStack.length === 0) { middlewareStack = getMiddleware('noMatch') }
-        middlewareStack = [...middlewareStack, ...getMiddleware('done')];
+        prepareRelay({ parameters });
+        if (run.length > 0) {
+          middlewareStack = run;
+        } else {
+          console.log(`No middleware could be matched for matchValue: ${ matchValue} and updateType: ${ updateType }`);
+          middlewareStack = noMatch;
+        }
+        middlewareStack = [...middlewareStack, ...done];
         thunkifyMiddleware(middlewareStack.shift())();
-        return exposed;
-      } catch (error) {
-        prepareRelay({ error });
-        middlewareStack = getMiddleware('error');
-        if (middlewareStack.length === 0) { console.error(error); }
-        middlewareStack = [...middlewareStack, ...getMiddleware('done')];
+      } catch (errorMessage) {
+        prepareRelay({ error : errorMessage });
+        middlewareStack = error;
+        if (middlewareStack.length === 0) { console.log('No "error" middleware found'); console.error(errorMessage); }
+        middlewareStack = [...middlewareStack, ...done];
         thunkifyMiddleware(middlewareStack.shift())();
       }
     }
