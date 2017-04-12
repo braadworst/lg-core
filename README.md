@@ -190,6 +190,9 @@ The relay object is passed from middleware function to middleware function. Ther
 ### relay.extensions:object
 An Object that has all the registered extensions in it. This way all extensions will not get scattered all over the object.
 
+### relay.parameters:object
+If you are using a parser that supplies you with parameters like `lr-url-parser`, you can access them via `relay.parameters`.
+
 ### relay.update(options:object):function
 Trigger a manual update event on the road, you are expected to pass an options object in, the options has one mandatory property which is `matchValue`. `matchvalue` needs to be a string value. This will be used to match in `run` hooks.
 
