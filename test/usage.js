@@ -161,15 +161,37 @@ tape('Middleware matching: error no hook', test => {
     response.end();
   };
 
-  let road = core('webserver')
+  let road = core('webserver', { resetAfterCycle : false })
     .extension('router', router, true)
-    .middleware({ done, noMatch, error, cause, middleware })
+    .middleware({ done, cause, middleware })
     .run('/', 'middleware')
     .run('/', 'cause')
     .done('done');
 
   server.listen(4006, function() {});
   http.get('http://localhost:4006', response => {
+    server.close();
+  });
+});
+
+tape('Early exit', test => {
+
+  const server = http.createServer();
+  const router = require('lr-server-router')(server);
+
+  let done = (next, relay, request, response) => {
+    response.end();
+    test.equal(relay.exit(), undefined);
+    test.end();
+  };
+
+  let road = core('webserver', { resetAfterCycle : false })
+    .extension('router', router, true)
+    .middleware({ done })
+    .run('/', 'done');
+
+  server.listen(4007, function() {});
+  http.get('http://localhost:4007', response => {
     server.close();
   });
 });
@@ -184,10 +206,22 @@ tape('Update without type', test => {
     test.end();
   };
 
+  let empty = next => { setTimeout(() => { next() }, 10) };
+
   let road = core('webserver', { resetAfterCycle : false })
-    .middleware({ done })
+    .middleware({ done, empty })
     .run('/other', 'done')
+    .run('/', 'empty')
+    .run('/', 'empty')
+    .run('/', 'empty')
+    .run('/', 'empty')
+    .run('/', 'empty')
+    .run('/', 'empty')
+    .run('/', 'empty')
+    .run('/', 'empty')
     .update({ matchValue : '/other' })
+    .update({ matchValue : '/' })
+    .update({ matchValue : '/' })
 });
 
 tape('Update without middleware', test => {

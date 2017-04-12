@@ -2,23 +2,18 @@ const check = require('check-types');
 
 module.exports = (environmentId, options = {}) => {
   const defaultUpdateType     = 'get';
+  let middlewareStack         = [];
+  let updateStack             = [];
+  let relay;
+  let selectedParser          = { add : () => {}, parse : matchValue => { return { path : matchValue, parameters : {} } } };
   let resetAfterCycle         = true;
   let traditional             = [];
-  let stack                   = [];
   let extensions              = {};
-  let relay;
-  let parser                  = require('lr-url-parser')();
   let availableMiddleware     = {};
   let executingEnvironmentId  = environmentId;
   let selectedEnvironmentIds  = [environmentId];
   let environments            = {};
-  const exposed               = { extension, middleware, where, run, error, noMatch, done, update };
-
-  if (options.parser) {
-    check.assert.function(options.parser.add, 'Parser needs to have a method called "add"');
-    check.assert.function(options.parser.parse, 'Parser needs to have a method called "parse"');
-    parser = options.parser;
-  }
+  const exposed               = { extension, middleware, where, run, error, noMatch, done, update, parser };
 
   if (options.resetAfterCycle !== undefined) {
     check.assert.boolean(options.resetAfterCycle, 'resetAfterCycle needs to be a boolean');
@@ -26,16 +21,11 @@ module.exports = (environmentId, options = {}) => {
   }
 
   environments[environmentId] = environment(environmentId);
-  relay = setRelay();
 
-  function setRelay() {
-    if (resetAfterCycle) {
-      return { extensions };
-    } else if (!relay) {
-      return { extensions : {} };
-    } else {
-      return relay;
-    }
+  function parser(parser) {
+    check.assert.function(parser.add, 'Parser needs to have a method called "add"');
+    check.assert.function(parser.parse, 'Parser needs to have a method called "parse"');
+    selectedParser = parser;
   }
 
   function environment(id) {
@@ -91,6 +81,7 @@ module.exports = (environmentId, options = {}) => {
     check.assert.not.undefined(middlewareId, 'Middleware id cannot be empty');
     check.assert.match(middlewareId, /^[a-z0-9\.]+$/i, 'Middleware id needs to be a string containing only letters,numbers and an optional "."');
     check.assert.match(updateType, /^[a-z0-9]+$/i, 'Update type needs to be a string containing only letters and or numbers');
+    selectedParser.add(matchValue);
     selectedEnvironmentIds.forEach(environmentId => {
       environments[environmentId].middleware.push({ matchValue, id : middlewareId, updateType : updateType.toLowerCase() });
     });
@@ -119,65 +110,83 @@ module.exports = (environmentId, options = {}) => {
   }
 
   function update(options, ...parameters) {
-    check.assert.assigned(options.matchValue, 'Update function cannot find a matchValue');
-    const matchValue      = parser.parse(options.matchValue);
-    const updateType      = options.updateType ? options.updateType.toLowerCase() : defaultUpdateType;
-    relay                 = setRelay();
-    relay.parameters      = matchValue.parameters;
-    const environment     = environments[executingEnvironmentId];
-    let middleware        = environment.middleware
-      .filter(record => record.matchValue === matchValue.path || record.matchValue === '*')
-      .filter(record => record.updateType === updateType);
-    stack = [...stack, ...middleware];
-
-    function addNoMatchMiddleware() {
-      stack = [...stack, ...environment.noMatch.filter(middleware => middleware.updateType === updateType)];
+    updateStack.push({ options, parameters });
+    if (middlewareStack.length === 0) {
+      runMiddlewareStack();
     }
+    return exposed;
+  }
 
-    function addDoneMiddleware() {
-      stack = [...stack, ...environment.done.filter(middleware => middleware.updateType === updateType)];
+  function exit() {
+    middlewareStack = [];
+    runMiddlewareStack();
+  }
+
+  function prepareRelay(parameters) {
+    if (!relay || resetAfterCycle) {
+      relay = Object.assign({ extensions, update, exit }, parameters);
+    } else {
+      relay = Object.assign({}, relay, parameters);
     }
+  }
 
-    function addErrorMiddleware() {
-      stack = [...stack, ...environment.error.filter(middleware => middleware.updateType === updateType)];
-    }
+  function runMiddlewareStack() {
+    const update = updateStack.shift();
+    if (update) {
 
-    if (middleware.length === 0) { addNoMatchMiddleware(); }
-    addDoneMiddleware();
-
-    function thunkify(record) {
-      const id       = record.id;
-      const callback = availableMiddleware[id];
-      check.assert.assigned(callback, `Middleware ${ id } not found`);
-      check.assert.function(callback, 'Middleware needs to be a function');
-      return function(defined = {}) {
-        check.assert.object(defined, 'Relay additions need to be an object');
-        relay = Object.assign({}, relay, defined);
-        const next = (stack.length === 0) ? () => {} : thunkify(stack.shift());
-        if (traditional.indexOf(id) > -1) {
-          callback(...parameters, next);
-        } else {
-          callback(next, relay, ...parameters);
+      function thunkifyMiddleware(currentMiddleware) {
+        if (!currentMiddleware) { return () => {} }
+        const id       = currentMiddleware.id;
+        const callback = availableMiddleware[id];
+        check.assert.assigned(callback, `Middleware ${ id } not found`);
+        check.assert.function(callback, 'Middleware needs to be a function');
+        return function(defined = {}) {
+          check.assert.object(defined, 'Relay additions need to be an object');
+          relay          = Object.assign({}, relay, defined);
+            const next   = middlewareStack.length === 0 ? () => {} : thunkifyMiddleware(middlewareStack.shift());
+          let parameters = [next, relay, ...update.parameters];
+          if (traditional.indexOf(id) > -1 && relay.error) {
+            parameters = [...update.parameters, next, relay.error];
+          } else if (traditional.indexOf(id) > -1) {
+            parameters = [...update.parameters, next];
+          }
+          callback(...parameters);
+          if (middlewareStack.length === 0) { runMiddlewareStack(); }
         }
       }
-    }
 
-    try {
-      if (stack.length > 0) {
-        thunkify(stack.shift())(relay);
-      } else {
-        console.warn(`No middleware found for current update cycle matchValue: ${ matchValue.path }, updateType: ${ updateType }`);
+      function getMiddleware(type) {
+        let output;
+        const environment = environments[executingEnvironmentId];
+        if (type === 'match') {
+          output = environment.middleware
+            .filter(record => record.matchValue === matchValue.path || record.matchValue === '*')
+            .filter(record => record.updateType === updateType);
+        } else {
+          output = environment[type].filter(middleware => middleware.updateType === updateType);
+        }
+        if (output.length === 0 && (type === 'match' || type === 'error')) {
+          console.warn(`No ${ type === 'match' ? '' : '"' + type + '"'} middleware found for matchValue: ${ matchValue.path }, updateType: ${ updateType }`);
+        }
+        return output;
       }
-    } catch (error) {
-      stack = [];
-      addErrorMiddleware();
-      addDoneMiddleware();
-      relay.error = error;
-      if (stack.length > 0) {
-        thunkify(stack.shift())(relay);
-      } else {
-        console.error(`Error but no middleware found, path: ${ matchValue.path }, updateType: ${ updateType }`);
-        console.error(error);
+
+      check.assert.assigned(update.options.matchValue, 'Update function cannot find a matchValue');
+      const matchValue  = selectedParser.parse(update.options.matchValue);
+      const updateType  = update.options.updateType ? update.options.updateType.toLowerCase() : defaultUpdateType;
+      try {
+        prepareRelay({ parameters : matchValue.parameters });
+        middlewareStack = getMiddleware('match');
+        if (middlewareStack.length === 0) { middlewareStack = getMiddleware('noMatch') }
+        middlewareStack = [...middlewareStack, ...getMiddleware('done')];
+        thunkifyMiddleware(middlewareStack.shift())();
+        return exposed;
+      } catch (error) {
+        prepareRelay({ error });
+        middlewareStack = getMiddleware('error');
+        if (middlewareStack.length === 0) { console.error(error); }
+        middlewareStack = [...middlewareStack, ...getMiddleware('done')];
+        thunkifyMiddleware(middlewareStack.shift())();
       }
     }
   }

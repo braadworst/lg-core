@@ -76,3 +76,25 @@ tape('Testing traditional middleware', test => {
     server.close();
   });
 });
+
+tape('Testing traditional middleware error', test => {
+  const server = http.createServer();
+  const router = require('lr-server-router')(server);
+  const done   = (request, response, next, error) => {
+    test.equal(error.message, 'Error');
+    test.end();
+    response.end();
+    next();
+  };
+  const cause = () => { throw new Error('Error'); }
+  let road = core('webserver')
+    .extension('router', router, true)
+    .middleware({ done, cause }, 'done')
+    .run('/', 'cause')
+    .done('done');
+
+  server.listen(4015, function() {});
+  http.get('http://localhost:4015', response => {
+    server.close();
+  });
+});
