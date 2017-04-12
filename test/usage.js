@@ -252,6 +252,21 @@ tape('Reserved relay property update error', test => {
     .update({ matchValue : '/' });
 });
 
+tape('Reserved relay property parameters error', test => {
+  core('client')
+    .middleware({
+      reserved : next => { next({ parameters : true }) },
+      error : (next, relay) => {
+        test.equal(relay.error.message, 'Cannot assign parameters as a relay property, this is a reserved property')
+        test.end();
+      }
+    })
+    .run('/', 'reserved')
+    .run('/', 'reserved')
+    .error('error')
+    .update({ matchValue : '/' });
+});
+
 tape('Update without type', test => {
 
   const server  = http.createServer();

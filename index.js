@@ -22,16 +22,17 @@ module.exports = (environmentId, options = {}) => {
 
   environments[environmentId] = environment(environmentId);
 
-  function parser(parser) {
-    check.assert.function(parser.add, 'Parser needs to have a method called "add"');
-    check.assert.function(parser.parse, 'Parser needs to have a method called "parse"');
-    selectedParser = parser;
-  }
-
   function environment(id) {
     check.assert.not.undefined(id, 'Environment id cannot be empty');
     check.assert.match(id, /^[a-z0-9]+$/i, 'Environment id needs to be a string containing only letters and or numbers');
     return { id, matches : {}, middleware : [], noMatch : [], error : [], done : [] };
+  }
+
+  function parser(parser) {
+    check.assert.function(parser.add, 'Parser needs to have a method called "add"');
+    check.assert.function(parser.parse, 'Parser needs to have a method called "parse"');
+    selectedParser = parser;
+    return exposed;
   }
 
   function extension(id, extension, isUpdater = false) {
@@ -145,6 +146,7 @@ module.exports = (environmentId, options = {}) => {
           if (defined.extensions) { throw new Error('Cannot assign extensions as a relay property, this is a reserved property') }
           if (defined.exit) { throw new Error('Cannot assign exit as a relay property, this is a reserved property') }
           if (defined.update) { throw new Error('Cannot assign update as a relay property, this is a reserved property') }
+          if (defined.parameters) { throw new Error('Cannot assign parameters as a relay property, this is a reserved property') }
           relay          = Object.assign({}, relay, defined);
             const next   = middlewareStack.length === 0 ? () => {} : thunkifyMiddleware(middlewareStack.shift());
           let parameters = [next, relay, ...update.parameters];
