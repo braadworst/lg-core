@@ -142,6 +142,9 @@ module.exports = (environmentId, options = {}) => {
         check.assert.function(callback, 'Middleware needs to be a function');
         return function(defined = {}) {
           check.assert.object(defined, 'Relay additions need to be an object');
+          if (defined.extensions) { throw new Error('Cannot assign extensions as a relay property, this is a reserved property') }
+          if (defined.exit) { throw new Error('Cannot assign exit as a relay property, this is a reserved property') }
+          if (defined.update) { throw new Error('Cannot assign update as a relay property, this is a reserved property') }
           relay          = Object.assign({}, relay, defined);
             const next   = middlewareStack.length === 0 ? () => {} : thunkifyMiddleware(middlewareStack.shift());
           let parameters = [next, relay, ...update.parameters];

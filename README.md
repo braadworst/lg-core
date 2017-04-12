@@ -1,13 +1,13 @@
 # lg-core reference
 
-The _lr-core_ package is the only mandatory package for Lagoon road. This package connects everything together, regardless of environment. There are eight exposed functions that you can use.
+The _lr-core_ package is the only mandatory package for Lagoon road. This package connects everything together, regardless of environment.
 
 | Information | - |
 | ----------- | - |
 | Code coverage | [![Coverage Status](https://coveralls.io/repos/github/lagoon-road/lr-core/badge.svg?branch=master)](https://coveralls.io/github/lagoon-road/lr-core?branch=master) |
 | Repo link | [lr-core](https://github.com/lagoon-road/lr-core) |
-| Dependencies | [check-types](https://github.com/philbooth/check-types.js), [lr-url-parser](https://github.com/lagoon-road/lr-url-parser) |
-| Size (Browserify, Babel, Uglify and Gzip)| 5.3KB |
+| Dependencies | [check-types](https://github.com/philbooth/check-types.js) |
+| Size (Browserify, Babel, Uglify and Gzip)| 5.1KB |
 | Version | 1.0.0 |
 | License | MIT |
 | Usage | [lagoonroad.com/guide](https://www.lagoonroad.com/guide) |
@@ -27,6 +27,16 @@ The parser to use when handling the _matchValue_. Read more about parsers in the
 
 **[options.resetAfterCycle:boolean]**  
 By default the relay object gets cleared after an update cycle of the road, sometimes, mainly on the client, you want to keep the relay populated even if an update cycle has ran. To do so, you can set this boolean to  _false_
+
+---
+
+### road.parser(parser)
+```
+const parser = require('lr-url-parser')();
+road.parser(parser);
+```
+**parser:object**  
+The parser that you want to use to parse an incoming matchValue. It expects two functions in the object, `add` and `parse`. Read more about parsers in the [guide](/guide/how-to-write-a-parser)
 
 ---
 
@@ -53,9 +63,9 @@ Tell the core if on initialization the extension needs to be executed. This is t
 
 ---
 
-### road.middleware(middleware)
+### road.middleware(middleware, [...traditional])
 ```
-road.middleware({ bodyParser }, 'bodyParser');
+road.middleware({ bodyParser, response }, 'bodyParser', 'response');
 ```
 **middleware:object**  
 An object with all the middleware you want to use. This is a single depth object so don't use any nested structures.
@@ -70,6 +80,12 @@ An object with all the middleware you want to use. This is a single depth object
 > ```
 > Read more about how to define and use middleware in the [guide](https://lagoonroad.com/guide#middleware).
 
+**traditional:string**
+The middleware id of the middleware that you want to run in traditional mode. The relay object wil _not_ be passed in. The traditional function signature looks as follows:
+```
+// traditional, error is optional
+(request, response, next, error) => {}
+```
 ---
 
 ### road.where(environmentId, [...environmentId])
@@ -167,3 +183,17 @@ Each update can be have custom parameters that will be available as middleware a
 
 > Read more about parameters in the [middleware](https://lagoonroad.com/guide#middleware) section.
 > Every time a update method is called the middleware that matches will be added to the stack of middleware that needs to be executed. So when calling this on the server you might send out a response and afterwards more middleware will be called. Therefore use it on the client mainly to initialize events. Make sure you fully understand the middelware stack before start using the update function.
+
+## Relay object
+The relay object is passed from middleware function to middleware function. There are a couple of properties and methods in this object that cannot be overwritten. If you will try to do so, Lagoon road will throw an error to warn you of naming conflicts.
+
+### relay.extensions:object
+An Object that has all the registered extensions in it. This way all extensions will not get scattered all over the object.
+
+### relay.update(options:object):function
+Trigger a manual update event on the road, you are expected to pass an options object in, the options has one mandatory property which is `matchValue`. `matchvalue` needs to be a string value. This will be used to match in `run` hooks.
+
+The second options propery is optional, it is the `updateType` property. The default value is `get`, but can be set to anything. When triggering an update for a HTTP request, it will typically be the method type.
+
+### relay.exit():function
+When you want to prematurely finish the update cycle you have to call the `exit()` function. You want to use this when you want to send a `response.end` before the `done` hook. This function should be used rarely, read more about it in the [stack](/guide/stack) and [serving static content](/guide/serving-static-content) guides.

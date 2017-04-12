@@ -196,6 +196,62 @@ tape('Early exit', test => {
   });
 });
 
+tape('Update without middleware', test => {
+
+  const server  = http.createServer();
+
+  let road = core('webserver')
+    .update({ matchValue : '/other' });
+
+  test.equal(true, true);
+  test.end();
+});
+
+tape('Reserved relay property extension error', test => {
+  core('client')
+    .middleware({
+      reserved : next => { next({ extensions : true }) },
+      error : (next, relay) => {
+        test.equal(relay.error.message, 'Cannot assign extensions as a relay property, this is a reserved property')
+        test.end();
+      }
+    })
+    .run('/', 'reserved')
+    .run('/', 'reserved')
+    .error('error')
+    .update({ matchValue : '/' });
+});
+
+tape('Reserved relay property exit error', test => {
+  core('client')
+    .middleware({
+      reserved : next => { next({ exit : true }) },
+      error : (next, relay) => {
+        test.equal(relay.error.message, 'Cannot assign exit as a relay property, this is a reserved property')
+        test.end();
+      }
+    })
+    .run('/', 'reserved')
+    .run('/', 'reserved')
+    .error('error')
+    .update({ matchValue : '/' });
+});
+
+tape('Reserved relay property update error', test => {
+  core('client')
+    .middleware({
+      reserved : next => { next({ update : true }) },
+      error : (next, relay) => {
+        test.equal(relay.error.message, 'Cannot assign update as a relay property, this is a reserved property')
+        test.end();
+      }
+    })
+    .run('/', 'reserved')
+    .run('/', 'reserved')
+    .error('error')
+    .update({ matchValue : '/' });
+});
+
 tape('Update without type', test => {
 
   const server  = http.createServer();
@@ -222,15 +278,4 @@ tape('Update without type', test => {
     .update({ matchValue : '/other' })
     .update({ matchValue : '/' })
     .update({ matchValue : '/' })
-});
-
-tape('Update without middleware', test => {
-
-  const server  = http.createServer();
-
-  let road = core('webserver')
-    .update({ matchValue : '/other' });
-
-  test.equal(true, true);
-  test.end();
 });
