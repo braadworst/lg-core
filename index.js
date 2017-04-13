@@ -140,7 +140,6 @@ module.exports = (environmentId, options = {}) => {
   }
 
   async function runMiddlewareStack() {
-    console.log('runMiddlewareStack');
     const update = updateStack.shift();
     if (update) {
       if (resetAfterCycle || !relay) { relay = { extensions, update, exit } }
@@ -160,7 +159,7 @@ module.exports = (environmentId, options = {}) => {
           .map(middleware => middleware.middlewareId)
         : [];
       if (middlewareStack.length === 0) {
-        console.log(`No middleware could be matched for matchValue: ${ matchValue} and updateType: ${ updateType }`);
+        console.warn(`No middleware could be matched for matchValue: ${ matchValue} and updateType: ${ updateType }`);
         middlewareStack = noMatch;
       }
       middlewareStack = [...middlewareStack, ...done];
@@ -176,12 +175,10 @@ module.exports = (environmentId, options = {}) => {
       }
 
       function thunkifyMiddleware(id, final = false) {
-        console.log('thunk', middlewareStack.length, id);
         const callback = availableMiddleware[id];
         check.assert.assigned(callback, `Middleware ${ id } not found`);
         check.assert.function(callback, 'Middleware needs to be a function');
         return async function(defined) {
-          console.log('function execution');
           try {
             mergeRelay(defined);
             const next     = middlewareStack.length === 0
@@ -196,11 +193,11 @@ module.exports = (environmentId, options = {}) => {
             await callback(...parameters);
           } catch (errorMessage) {
             if (final) {
-              console.log(errorMessage);
+              console.error(errorMessage);
             } else {
-              relay = { error : errorMessage };
+              relay = { error : errorMessage, extensions, update, exit };
               middlewareStack = error;
-              if (middlewareStack.length === 0) { console.log('No "error" middleware found'); console.error(errorMessage); }
+              if (middlewareStack.length === 0) { console.warn('No "error" middleware found'); console.error(errorMessage); }
               middlewareStack = [...middlewareStack, ...done];
               if (middlewareStack.length > 0 ) { await thunkifyMiddleware(middlewareStack.shift(), true)(); }
             }
