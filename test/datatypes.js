@@ -69,6 +69,13 @@ tape('Datatypes invalid throws: error', test => {
         road.error(datatype);
       }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
     });
+  datatypes
+    .forEach(datatype => {
+      test.throws(() => {
+        const road = core('client');
+        road.error('middlewareId', datatype);
+      }, /Update type needs to be a string containing only letters and or numbers/);
+    });
   test.end();
 });
 
@@ -80,6 +87,13 @@ tape('Datatypes invalid throws: noMatch', test => {
         road.noMatch(datatype);
       }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
     });
+  datatypes
+    .forEach(datatype => {
+      test.throws(() => {
+        const road = core('client');
+        road.noMatch('middlewareId', datatype);
+      }, /Update type needs to be a string containing only letters and or numbers/);
+    });
   test.end();
 });
 
@@ -90,6 +104,13 @@ tape('Datatypes invalid throws: done', test => {
         const road = core('client');
         road.done(datatype);
       }, /Middleware id needs to be a string containing only letters,numbers and an optional "."/);
+    });
+  datatypes
+    .forEach(datatype => {
+      test.throws(() => {
+        const road = core('client');
+        road.done('middlewareId', datatype);
+      }, /Update type needs to be a string containing only letters and or numbers/);
     });
   test.end();
 });

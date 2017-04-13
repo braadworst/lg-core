@@ -50,7 +50,7 @@ tape('Empty throws: error', test => {
   test.throws(() => {
     const road = core('client');
     road.error();
-  }, /Error needs exactly one argument/);
+  }, /Middleware id cannot be empty/);
   test.end();
 });
 
@@ -58,7 +58,7 @@ tape('Empty throws: noMatch', test => {
   test.throws(() => {
     const road = core('client');
     road.noMatch();
-  }, /NoMatch needs exactly one argument/);
+  }, /Middleware id cannot be empty/);
   test.end();
 });
 
@@ -66,6 +66,6 @@ tape('Empty throws: done', test => {
   test.throws(() => {
     const road = core('client');
     road.done();
-  }, /Done needs exactly one argument/);
+  }, /Middleware id cannot be empty/);
   test.end();
 });

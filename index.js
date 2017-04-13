@@ -1,7 +1,7 @@
 const check = require('check-types');
 
 module.exports = (environmentId, options = {}) => {
-  const defaultUpdateType     = 'get';
+  const defaultUpdateType     = 'GET';
   let middlewareStack         = [];
   let updateStack             = [];
   let relay;
@@ -82,17 +82,16 @@ module.exports = (environmentId, options = {}) => {
     check.assert.match(updateType, /^[a-z0-9]+$/i, 'Update type needs to be a string containing only letters and or numbers');
     selectedParser.add(matchValue);
     selectedEnvironmentIds.forEach(id => {
-      !environments[id].run[updateType]
-        ? environments[id].run[updateType] = { [ matchValue ] : [ middlewareId ] }
-        : !environments[id].run[updateType][matchValue]
-          ? environments[id].run[updateType][matchValue] = [middlewareId]
-          : environments[id].run[updateType][matchValue].push(middlewareId);
+      Array.isArray(environments[id].run[updateType])
+        ? environments[id].run[updateType].push({ middlewareId, matchValue })
+        : environments[id].run[updateType] = [{ middlewareId, matchValue }];
     });
     return exposed;
   }
 
   function error(middlewareId, updateType = defaultUpdateType) {
-    check.assert.zero(arguments.length - 1, 'Error needs exactly one argument');
+    check.assert.not.undefined(middlewareId, 'Middleware id cannot be empty');
+    check.assert.match(updateType, /^[a-z0-9]+$/i, 'Update type needs to be a string containing only letters and or numbers');
     check.assert.match(middlewareId, /^[a-z0-9\.]+$/i, 'Middleware id needs to be a string containing only letters,numbers and an optional "."');
     selectedEnvironmentIds.forEach(id => {
       Array.isArray(environments[id].error[updateType])
@@ -103,7 +102,8 @@ module.exports = (environmentId, options = {}) => {
   }
 
   function noMatch(middlewareId, updateType = defaultUpdateType) {
-    check.assert.zero(arguments.length - 1, 'NoMatch needs exactly one argument');
+    check.assert.not.undefined(middlewareId, 'Middleware id cannot be empty');
+    check.assert.match(updateType, /^[a-z0-9]+$/i, 'Update type needs to be a string containing only letters and or numbers');
     check.assert.match(middlewareId, /^[a-z0-9\.]+$/i, 'Middleware id needs to be a string containing only letters,numbers and an optional "."');
     selectedEnvironmentIds.forEach(id => {
       Array.isArray(environments[id].noMatch[updateType])
@@ -114,7 +114,8 @@ module.exports = (environmentId, options = {}) => {
   }
 
   function done(middlewareId, updateType = defaultUpdateType) {
-    check.assert.zero(arguments.length - 1, 'Done needs exactly one argument');
+    check.assert.not.undefined(middlewareId, 'Middleware id cannot be empty');
+    check.assert.match(updateType, /^[a-z0-9]+$/i, 'Update type needs to be a string containing only letters and or numbers');
     check.assert.match(middlewareId, /^[a-z0-9\.]+$/i, 'Middleware id needs to be a string containing only letters,numbers and an optional "."');
     selectedEnvironmentIds.forEach(id => {
       Array.isArray(environments[id].done[updateType])
@@ -175,10 +176,13 @@ module.exports = (environmentId, options = {}) => {
       let   matchValue  = selectedParser.parse(update.options.matchValue);
       const parameters  = matchValue.parameters;
             matchValue  = matchValue.path;
-      const updateType  = update.options.updateType ? update.options.updateType.toLowerCase() : defaultUpdateType;
+      const updateType  = update.options.updateType ? update.options.updateType : defaultUpdateType;
       const environment = environments[executingEnvironmentId];
-      let   run         = (environment.run[updateType] && environment.run[updateType][matchValue]) ? environment.run[updateType][matchValue] : [];
-            run         = (environment.run[updateType] && environment.run[updateType]['*']) ? [...run, ...environment.run[updateType]['*']] : run;
+      const run         = environment.run[updateType]
+        ? environment.run[updateType]
+          .filter(middleware => (middleware.matchValue === matchValue || middleware.matchValue === '*'))
+          .map(middleware => middleware.middlewareId)
+        : [];
       const done        = environment.done[updateType] ? environment.done[updateType] : [];
       const noMatch     = environment.noMatch[updateType] ? environment.noMatch[updateType] : [];
       const error       = environment.error[updateType] ? environment.error[updateType] : [];
