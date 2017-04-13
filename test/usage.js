@@ -1,209 +1,152 @@
 const tape   = require('tape');
 const core   = require('../index');
-const http   = require('http');
-
-const error = (next, relay, request, response) => {
-  next({ error : true });
-};
-
-const noMatch = (next, relay, request, response) => {
-  next({ noMatch : true });
-};
-
-const middleware = (next, relay, request, response) => {
-  next({ middleware : true });
-};
-
-const emptyNext = (next, relay, request, response) => {
-  next();
-};
-
-const wildcard = (next, relay, request, response) => {
-  next({ wildcard : true });
-};
-
-const negative = (next, relay, request, response) => {
-  next({ negative : true });
-};
-
-const cause = (next, relay, request, response) => {
-  throw new Error('Failing');
-};
-
-const notObject = (next, relay, request, response) => {
-  next(true);
-};
 
 tape('Adding unknown environment', test => {
-  const server = http.createServer();
-  const router = require('lr-server-router')(server);
-  const done   = (next, relay, request, response) => {
+  const done = (next, relay) => {
     test.equal(true, true);
     test.end();
-    response.end();
+    next();
   };
 
-  let road = core('webserver')
-    .extension('router', router, true)
+  core('webserver')
     .middleware({ done })
     .where('client')
     .where('webserver')
-    .done('done');
-
-  server.listen(4011, function() {});
-  http.get('http://localhost:4011', response => {
-    server.close();
-  });
+    .done('done')
+    .update({ matchValue: '/' });
 });
 
-tape('Middleware matching: specific, negative, wildcard, no done', test => {
-  const server = http.createServer();
-  const router = require('lr-server-router')(server);
-
-  let done = (next, relay, request, response) => {
+tape('Middleware matching: wildcard', test => {
+  const done = (next, relay) => {
     test.equal(relay.wildcard, true);
     test.end();
-    response.end();
-    next(); // not needed just for testing
+    next();
+  };
+  const wildcard = (next, relay) => {
+    next({ wildcard : true });
   };
 
-  let road = core('webserver')
-    .extension('router', router, true)
+  core('webserver')
     .middleware({ done, wildcard })
     .run('*', 'wildcard')
-    .done('done');
-
-  server.listen(4001, function() {});
-  http.get('http://localhost:4001', response => {
-    server.close();
-  });
+    .done('done')
+    .update({ matchValue : '/' });
 });
 
 tape('Middleware matching: noMatch', test => {
-
-  const server = http.createServer();
-  const router = require('lr-server-router')(server);
-
-  let done = (next, relay, request, response) => {
+  const done = (next, relay) => {
     test.equal(relay.noMatch, true);
     test.end();
-    response.end();
+    next();
   };
-
-  let road = core('webserver')
-    .extension('router', router, true)
-    .middleware({ done, noMatch, error, middleware })
+  const noMatch = (next, relay) => {
+    next({ noMatch : true });
+  };
+  core('webserver')
+    .middleware({ done, noMatch })
     .noMatch('noMatch')
-    .done('done');
-
-  server.listen(4002, function() {});
-  http.get('http://localhost:4002', response => {
-    server.close();
-  });
+    .done('done')
+    .update({ matchValue : '/' });
 });
 
 tape('Middleware matching: error', test => {
-
-  const server = http.createServer();
-  const router = require('lr-server-router')(server);
-
-  let done = (next, relay, request, response) => {
+  const done = (next, relay) => {
     test.equal(relay.error, true);
     test.end();
-    response.end();
+    next();
+  };
+  const error = (next, relay) => {
+    next({ error : true });
+  };
+  const cause = (next, relay) => {
+    throw new Error('Failing');
   };
 
-  let road = core('webserver')
-    .extension('router', router, true)
-    .middleware({ done, noMatch, error, cause })
-    .run('/home', 'cause')
+  core('webserver')
+    .middleware({ done, error, cause })
+    .run('/', 'cause')
     .error('error')
-    .done('done');
+    .done('done')
+    .update({ matchValue : '/' })
+});
 
-  server.listen(4003, function() {});
-  http.get('http://localhost:4003/home', response => {
-    server.close();
-  });
+tape('Middleware matching: Async error', test => {
+  const done = (next, relay) => {
+    test.equal(relay.error, true);
+    test.end();
+    next();
+  };
+  const error = (next, relay) => {
+    next({ error : true });
+  };
+  const cause = async function(next, relay) {
+    throw new Error('Failing');
+  };
+
+  core('webserver')
+    .middleware({ done, error, cause })
+    .run('/', 'cause')
+    .error('error')
+    .done('done')
+    .update({ matchValue : '/' })
 });
 
 tape('Middleware matching: next not object', test => {
-
-  const server = http.createServer();
-  const router = require('lr-server-router')(server);
-
-  let done = (next, relay, request, response) => {
+  const done = (next, relay) => {
     test.equal(relay.error, true);
     test.end();
-    response.end();
+    next();
+  };
+  const notObject = (next, relay) => {
+    next(true);
+  };
+  const error = (next, relay) => {
+    next({ error : true });
   };
 
-  let road = core('webserver')
-    .extension('router', router, true)
-    .middleware({ done, noMatch, error, notObject })
+  core('webserver')
+    .middleware({ done, error, notObject })
     .run('/', 'notObject')
     .error('error')
-    .done('done');
-
-  server.listen(4005, function() {});
-  http.get('http://localhost:4005', response => {
-    server.close();
-  });
+    .done('done')
+    .update({ matchValue : '/' });
 });
 
 tape('Middleware matching: error no hook', test => {
-
-  const server = http.createServer();
-  const router = require('lr-server-router')(server);
-
-  let done = (next, relay, request, response) => {
-    test.equal(relay.middleware, true);
+  const done = (next, relay) => {
+    test.equal(typeof relay.error, 'object');
     test.end();
-    response.end();
+    next();
+  };
+  const cause = (next, relay) => {
+    throw new Error('Failing');
   };
 
-  let road = core('webserver', { resetAfterCycle : false })
-    .extension('router', router, true)
-    .middleware({ done, cause, middleware })
-    .run('/', 'middleware')
+  core('webserver')
+    .middleware({ done, cause })
     .run('/', 'cause')
-    .done('done');
-
-  server.listen(4006, function() {});
-  http.get('http://localhost:4006', response => {
-    server.close();
-  });
+    .done('done')
+    .update({ matchValue : '/' })
 });
 
 tape('Early exit', test => {
-
-  const server = http.createServer();
-  const router = require('lr-server-router')(server);
-
-  let done = (next, relay, request, response) => {
-    response.end();
+  const early = (next, relay) => {
     test.equal(relay.exit(), undefined);
     test.end();
+    next();
   };
 
-  let road = core('webserver', { resetAfterCycle : false })
-    .extension('router', router, true)
-    .middleware({ done })
-    .run('/', 'done');
-
-  server.listen(4007, function() {});
-  http.get('http://localhost:4007', response => {
-    server.close();
-  });
+  let road = core('webserver')
+    .middleware({ early })
+    .run('/', 'early')
+    .update({ matchValue : '/' })
 });
 
 tape('Update without middleware', test => {
-
-  const server  = http.createServer();
-
-  let road = core('webserver')
-    .update({ matchValue : '/other' });
-
-  test.equal(true, true);
+  test.doesNotThrow(() => {
+    core('webserver')
+      .update({ matchValue : '/' });
+  }, undefined);
   test.end();
 });
 
@@ -214,6 +157,7 @@ tape('Reserved relay property extension error', test => {
       error : (next, relay) => {
         test.equal(relay.error.message, 'Cannot assign extensions as a relay property, this is a reserved property')
         test.end();
+        next();
       }
     })
     .run('/', 'reserved')
@@ -229,6 +173,7 @@ tape('Reserved relay property exit error', test => {
       error : (next, relay) => {
         test.equal(relay.error.message, 'Cannot assign exit as a relay property, this is a reserved property')
         test.end();
+        next();
       }
     })
     .run('/', 'reserved')
@@ -244,6 +189,7 @@ tape('Reserved relay property update error', test => {
       error : (next, relay) => {
         test.equal(relay.error.message, 'Cannot assign update as a relay property, this is a reserved property')
         test.end();
+        next();
       }
     })
     .run('/', 'reserved')
@@ -259,6 +205,7 @@ tape('Reserved relay property parameters error', test => {
       error : (next, relay) => {
         test.equal(relay.error.message, 'Cannot assign parameters as a relay property, this is a reserved property')
         test.end();
+        next();
       }
     })
     .run('/', 'reserved')
@@ -267,47 +214,50 @@ tape('Reserved relay property parameters error', test => {
     .update({ matchValue : '/' });
 });
 
-tape('Update without type', test => {
-
-  const server  = http.createServer();
-
-  let done = (next, relay) => {
-    next();
-    test.equal(true, true);
+tape('Carry over relay', test => {
+  const done = (next, relay) => {
+    test.equal(relay.one, true);
+    test.equal(relay.two, true);
     test.end();
+    next();
   };
 
-  let empty = next => { setTimeout(() => { next() }, 10) };
+  const two = next => next({ one : true });
+  const one = next => next({ two : true });
 
-  let road = core('webserver', { resetAfterCycle : false })
-    .middleware({ done, empty })
-    .run('/other', 'done')
-    .run('/', 'empty')
-    .run('/', 'empty')
-    .run('/', 'empty')
-    .run('/', 'empty')
-    .run('/', 'empty')
-    .run('/', 'empty')
-    .run('/', 'empty')
-    .run('/', 'empty')
-    .update({ matchValue : '/other' })
-    .update({ matchValue : '/' })
-    .update({ matchValue : '/' })
+  core('webserver', { resetAfterCycle : false})
+    .middleware({ done, one, two })
+    .run('/one', 'one')
+    .run('/two', 'two')
+    .run('/two', 'done')
+    .update({ matchValue : '/one' })
+    .update({ matchValue : '/two' })
 });
 
-tape('Multiple error', test => {
-
-  const server  = http.createServer();
-
-  let done = (next, relay) => {
-    next();
-    test.equal(relay.error, true);
+tape('Next after done', test => {
+  const done = (next, relay) => {
+    test.equal(typeof next, 'function');
     test.end();
+    next();
   };
 
-  let error = next => { next({ error : true }) };
+  core('webserver')
+    .middleware({ done })
+    .done('done')
+    .update({ matchValue : '/' });
+});
 
-  let road = core('webserver')
+tape('Multiple error hooks', test => {
+  const done = (next, relay) => {
+    test.equal(relay.error, true);
+    test.end();
+    next();
+  };
+
+  const error = next => { next({ error : true }) };
+  const cause = next => { throw new Error('Ouch'); }
+
+  core('webserver')
     .middleware({ done, error, cause })
     .run('/', 'cause')
     .error('error')
@@ -316,41 +266,66 @@ tape('Multiple error', test => {
     .update({ matchValue : '/' })
 });
 
-tape('Multiple done', test => {
-
-  const server  = http.createServer();
-
-  let done = (next, relay) => {
-    next();
+tape('Multiple done hooks', test => {
+  const done = (next, relay) => {
     test.equal(relay.error, true);
     test.end();
+    next();
   };
 
-  let error = next => { next({ error : true }) };
+  const error = next => { next({ error : true }) };
 
-  let road = core('webserver')
-    .middleware({ done, error })
+  core('webserver')
+    .middleware({ done, error})
     .done('error')
     .done('done')
     .update({ matchValue : '/' })
 });
 
-tape('Multiple error', test => {
-
-  const server  = http.createServer();
-
-  let done = (next, relay) => {
-    next();
-    test.equal(relay.error, true);
+tape('Multiple noMatch hooks', test => {
+  const done = (next, relay) => {
+    test.equal(relay.one, true);
+    test.equal(relay.two, true);
     test.end();
+    next();
   };
 
-  let error = next => { next({ error : true }) };
+  const two = next => next({ one : true });
+  const one = next => next({ two : true });
 
-  let road = core('webserver')
-    .middleware({ done, error })
-    .noMatch('error')
-    .noMatch('error')
+  core('webserver')
+    .middleware({ done, one, two })
+    .noMatch('one')
+    .noMatch('two')
     .done('done')
+    .update({ matchValue : '/' })
+});
+
+tape('Error but no hooks edge case', test => {
+  const cause = next => {
+    test.equal(true, true);
+    test.end();
+    throw new Error('Ouch');
+  }
+
+  core('webserver')
+    .middleware({ cause })
+    .run('/', 'cause')
+    .update({ matchValue : '/' })
+});
+
+tape('Error in the error handling', test => {
+  const cause = next => {
+    throw new Error('Ouch');
+  }
+  const error = next => {
+    test.equal(true, true);
+    test.end();
+    throw new Error('Ouch');
+  }
+  core('webserver')
+    .middleware({ cause, error })
+    .run('/', 'cause')
+    .error('error')
     .update({ matchValue : '/' })
 });
