@@ -134,6 +134,13 @@ module.exports = (environmentId, options = {}) => {
     return exposed;
   }
 
+  function updateRelay(options) {
+    updateStack.push({ options, parameters : [] });
+    if (middlewareStackRunning === false) {
+      runMiddlewareStack();
+    }
+  }
+
   function exit() {
     middlewareStack = [];
     runMiddlewareStack();
@@ -142,7 +149,7 @@ module.exports = (environmentId, options = {}) => {
   async function runMiddlewareStack() {
     const update = updateStack.shift();
     if (update) {
-      if (resetAfterCycle || !relay) { relay = { extensions, update, exit } }
+      if (resetAfterCycle || !relay) { relay = { extensions, update : updateRelay, exit } }
       middlewareStackRunning = true;
       check.assert.assigned(update.options.matchValue, 'Update function cannot find a matchValue');
       let   matchValue  = selectedParser.parse(update.options.matchValue);
@@ -163,7 +170,11 @@ module.exports = (environmentId, options = {}) => {
         middlewareStack = noMatch;
       }
       middlewareStack = [...middlewareStack, ...done];
-      if (middlewareStack.length > 0 ) { await thunkifyMiddleware(middlewareStack.shift())(); }
+      if (middlewareStack.length > 0 ) {
+        await thunkifyMiddleware(middlewareStack.shift())();
+      } else {
+        runMiddlewareStack();
+      }
 
       function mergeRelay(defined = {}) {
         check.assert.object(defined, 'Relay additions need to be an object');
@@ -195,7 +206,7 @@ module.exports = (environmentId, options = {}) => {
             if (final) {
               console.error(errorMessage);
             } else {
-              relay = { error : errorMessage, extensions, update, exit };
+              relay = { error : errorMessage, extensions, update : updateRelay, exit };
               middlewareStack = error;
               if (middlewareStack.length === 0) { console.warn('No "error" middleware found'); console.error(errorMessage); }
               middlewareStack = [...middlewareStack, ...done];

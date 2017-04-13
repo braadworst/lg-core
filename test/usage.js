@@ -329,3 +329,45 @@ tape('Error in the error handling', test => {
     .error('error')
     .update({ matchValue : '/' })
 });
+
+tape('Calling the update from the relay', test => {
+  const updateRelay = (next, relay) => {
+    relay.update({ matchValue : '/update', updateType : 'data' });
+    next();
+  }
+  const middleware = (next, relay) => {
+    next({ middleware : true })
+  }
+  const done = (next, relay) => {
+    test.equal(relay.middleware, true);
+    test.end();
+  }
+  core('webserver')
+    .middleware({ done, updateRelay, middleware })
+    .run('/', 'updateRelay')
+    .run('/update', 'middleware', 'data')
+    .done('done', 'data')
+    .update({ matchValue : '/' });
+});
+
+tape('Calling the update from the relay, delayed', test => {
+  const updateRelay = (next, relay) => {
+    setTimeout(() => {
+      relay.update({ matchValue : '/update', updateType : 'data' });
+    }, 100);
+    next();
+  }
+  const middleware = (next, relay) => {
+    next({ middleware : true })
+  }
+  const done = (next, relay) => {
+    test.equal(relay.middleware, true);
+    test.end();
+  }
+  core('webserver')
+    .middleware({ done, updateRelay, middleware })
+    .run('/', 'updateRelay')
+    .run('/update', 'middleware', 'data')
+    .done('done', 'data')
+    .update({ matchValue : '/' });
+});
