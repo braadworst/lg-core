@@ -165,10 +165,7 @@ module.exports = (environmentId, options = {}) => {
           .filter(middleware => (middleware.matchValue === matchValue || middleware.matchValue === '*'))
           .map(middleware => middleware.middlewareId)
         : [];
-      if (middlewareStack.length === 0) {
-        console.warn(`No middleware could be matched for matchValue: ${ matchValue} and updateType: ${ updateType }`);
-        middlewareStack = noMatch;
-      }
+      if (middlewareStack.length === 0) { middlewareStack = noMatch; }
       middlewareStack = [...middlewareStack, ...done];
       if (middlewareStack.length > 0 ) {
         await thunkifyMiddleware(middlewareStack.shift())();
