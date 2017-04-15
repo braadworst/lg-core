@@ -1,11 +1,11 @@
-# lr-core reference
+# lr-main reference
 
-The _lr-core_ package is the only mandatory package for Lagoon road. This package connects everything together, regardless of environment.
+The _lr-main_ package is the only mandatory package for Lagoon road. This package connects everything together, regardless of environment.
 
 | Information | - |
 | ----------- | - |
-| Code coverage | [![Coverage Status](https://coveralls.io/repos/github/lagoon-road/lr-core/badge.svg?branch=master)](https://coveralls.io/github/lagoon-road/lr-core?branch=master) |
-| Repo link | [lr-core](https://github.com/lagoon-road/lr-core) |
+| Code coverage | [![Coverage Status](https://coveralls.io/repos/github/lagoon-road/lr-main/badge.svg?branch=master)](https://coveralls.io/github/lagoon-road/lr-main?branch=master) |
+| Repo link | [lr-main](https://github.com/lagoon-road/lr-main) |
 | Dependencies | [check-types](https://github.com/philbooth/check-types.js) |
 | Size (Browserify, Babel and Gzip)| 6.9KB |
 | Version | 1.0.0 |
@@ -16,7 +16,7 @@ The _lr-core_ package is the only mandatory package for Lagoon road. This packag
 
 ### core(environmentId, [options])
 ```
-const core = require('lr-core');
+const core = require('lr-main');
 const road = core('webserver');
 ```
 **environmentId:string**  
