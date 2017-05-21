@@ -134,8 +134,8 @@ module.exports = (environmentId, options = {}) => {
     return exposed;
   }
 
-  function updateRelay(options) {
-    updateStack.push({ options, parameters : [] });
+  function updateRelay(options, ...parameters) {
+    updateStack.push({ options, parameters });
     if (middlewareStackRunning === false) {
       runMiddlewareStack();
     }
