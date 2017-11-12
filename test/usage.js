@@ -135,3 +135,29 @@ tape('Passing third party params', test => {
     .run('/', 'done')
     .update({ matchValue : '/' }, true)
 });
+
+tape('Exit loop', async function(test) {
+
+  const one = road => {
+    return { one : true };
+  };
+  const two = road => {
+    return 'exit';
+  };
+  const three = road => {
+    return { three : true };
+  };
+
+  let temp = await core('webserver')
+    .callback('one', one)
+    .callback('two', two)
+    .callback('three', three)
+    .run('/', 'one')
+    .run('/', 'two')
+    .run('/', 'three')
+    .update({ matchValue : '/' })
+
+  test.equal(temp.one, true);
+  test.equal(temp.three, undefined);
+  test.end();
+});

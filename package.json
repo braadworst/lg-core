@@ -1,6 +1,6 @@
 {
   "name": "lr-main",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "The core for everything lagoon-road",
   "main": "index.js",
   "scripts": {

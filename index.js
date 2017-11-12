@@ -118,7 +118,9 @@ module.exports = (executingEnvironment) => {
     try {
       for (let i = 0; i < callbacks.length; i++) {
         let response = await callbacks[i](exposed, ...parameters);
-        if (typeof response === 'object') {
+        if (response === 'exit') {
+          break;
+        } else if (typeof response === 'object') {
           exposed = Object.assign({}, exposed, response);
         }
       }
