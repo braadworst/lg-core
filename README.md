@@ -1,5 +1,14 @@
 # lr-main reference
 
+## Changelog in v2.0.0
+- Simplified code and usage, reduced package by almost 90% to 1.3KB
+- Parallel processing, speeding up and non blocking
+- Removed the complete next callback, working with returns
+- Simpler interface, no more relay, you have control over the complete road at runtime
+- Dynamic assignment of callbacks (previously middleware) is now possible
+- Extensions are not so deeply nested anymore
+-
+
 The _lr-main_ package is the only mandatory package for Lagoon road. This package connects everything together, regardless of environment.
 
 | Information | - |
@@ -7,23 +16,19 @@ The _lr-main_ package is the only mandatory package for Lagoon road. This packag
 | Code coverage | [![Coverage Status](https://coveralls.io/repos/github/lagoon-road/lr-main/badge.svg?branch=master)](https://coveralls.io/github/lagoon-road/lr-main?branch=master) |
 | Repo link | [lr-main](https://github.com/lagoon-road/lr-main) |
 | Dependencies | [check-types](https://github.com/philbooth/check-types.js) |
-| Size (Browserify, Babel and Gzip)| 6.9KB |
-| Version | 1.0.0 |
+| Size (Gzip)| 1.3KB |
+| Version | 2.0.0 |
 | License | MIT |
 | Usage | [guide](https://lagoonroad.com/guide) |
 
 ---
 
-### core(environmentId, [options])
+### core(environmentId)  
 ```
-const core = require('lr-main');
-const road = core('webserver');
+const road = require('lr-main')('webserver');
 ```
 **environmentId:string**  
-The primary environment id for the road, this is the executing environment that will be used when an update event is fired.
-
-**[options.resetAfterCycle:boolean]**  
-By default the relay object gets cleared after an update event of the road, sometimes, mainly on the client, you want to keep the relay populated even if an update event has ran. To do so, you can set this boolean to  _false_
+The primary environment id for the road, this is the executing environment that will be used when an update event is fired.  
 
 ---
 
@@ -50,38 +55,32 @@ The actual extension, this can be any type of code that you want to use
 **[isUpdater:boolean = false]**  
 Tell the core if on initialization the extension needs to be executed. This is typically for extensions that use update events to trigger updates to the road. Read more about [extensions](https://lagoonroad.com/guide/writing-extensions) in the guide.
 
-> Extensions can be used in middleware via the relay object.
+> Extensions are available on the road object in the callback
 > ```
-> module.exports = (next, relay) => {
->   console.log(relay.extensions.extensionName);
->   next();
+> module.exports = road => {
+>   console.log(road.extensionName);
 > }
 >```
 
 ---
 
-### road.middleware(middleware, [...traditional])
+### road.callback(id, callbackFunction)
 ```
-road.middleware({ bodyParser, response }, 'bodyParser', 'response');
+road.callback('debug', road => { console.log(road) });
 ```
-**middleware:object**  
-An object with all the middleware you want to use. This is a single depth object so don't use any nested structures.
+**id:string**  
+Unique id to identify the current callback function
 
-> Middleware methods can be called multiple times, the middleware will all be added to a single object within the core. Therefore you need to supply unique ids/keys.
-> If you have a multitude of middleware functions that you  want to use it might be handy to use a dot notation to  group your middleware.
-> ```
-> road.middleware({
->   'component.navigation' : require('...'),  
->   'component.home'       : require('...'),  
-> });
-> ```
+**callbackFunction:function**
+The actual function that you want to call, it will have the road as parameter and some optional paramaters that might have been given by the update event.
+```
+module.exports = road => {
+  // body
+  return { key : value } // Return an object, this will be added to the road object
+}
+```
 
-**traditional:string**
-The middleware id of the middleware that you want to run in traditional mode. The relay object wil _not_ be passed in. The traditional function signature looks as follows:
-```
-// traditional, error is optional
-(request, response, next, error) => {}
-```
+
 ---
 
 ### road.where(environmentId, [...environmentId])
@@ -91,72 +90,40 @@ road.where('webserver', 'client');
 ```
 
 **environmentId**  
-The where method expects at least one argument, which should be a string. This is an environment id to which all the following middleware will be assigned. If you want to assign middleware to multiple environments you can just specify several ids like in the example above.
+The where method expects at least one argument, which should be a string. This is an environment id to which all the following callback will be assigned. If you want to assign callback to multiple environments you can just specify several ids like in the example above.
 
 ---
 
-### road.run(matchValue, middlewareId, [matchValue])
+### road.run(matchValue, callbackId, [matchValue])
 
 ```
-road.run('*', 'log');
+road
+  .run('*', 'log');          // All matches
+  .run('/some-url', 'log');  // This specific match
+  .run('-/some-url', 'log'); // Everything except this match
 ```
 
 **matchValue:string**  
-A match value in most webapps can be thought of as an url path, but it is not limited to paths only. Frankly it can be any string you can think of, even a JSON string to match on JSON content. Or in an even more exotic example you can match Raspberry Pie sensor outputs via an extension to string values and let that trigger middleware. You can use the `*` as a wildcard to match on all match values that might come in.
+A match value in most webapps can be thought of as an url path, but it is not limited to paths only. Frankly it can be any string you can think of, even a JSON string to match on JSON content. Or in an even more exotic example you can match Raspberry Pie sensor outputs via an extension to string values and let that trigger callbacks. You can use the `*` as a wildcard to match on all match values that might come in or `-` if you want to run it on all the paths except the given one.
 
-**middlewareId:string**  
-Identifier you added by using the `middleware` method. It needs to be a string and should match to a middleware function, otherwise it will throw an error.
+**callbackId:string**  
+Identifier you added by using the `callback` method. It needs to be a string and should match to a callback function, otherwise it will throw an error.
 
 **[updateType:string]**  
-The update type is an extra layer for matching middleware, if we use a http protocol to update the road, this will be the method for the request. By default it wil be `GET` because it is the most common, but it can be overwritten to be something else. Again you are not limited to http methods, it fully depends on what an extension sends out via an update event.
+The update type is an extra layer for matching callback, if we use a http protocol to update the road, this will be the method for the request. By default it wil be `GET` because it is the most common, but it can be overwritten to be something else. Again you are not limited to http methods, it fully depends on what an extension sends out via an update event.
 
 ---
 
-### road.error(middlewareId, [updateType])
+### road.fail(callbackId)
 
 ```
-road.error('log')
+road.fail('log')
 ```
 
-_Whenever the stack of middleware that is updated throws an error, it will be redirected to error middleware. You can use it to render alternative content or log the errors. The `relay` object will have a new property `relay.error` with the error message._
+_Whenever a callback throws an error, it will be redirected to error callback. You can use it to render alternative content or log the errors. The `road` object will have a new property `error` with the error. The fail method will also be called when no callbacks could be found for the current matchValue._
 
-**middlewareId:string**  
-Identifier you added by using the `middleware` method. It needs to be a string and should match to a middleware function, otherwise it will throw.
-
-**[updateType:string]**  
-The update type is an extra layer for matching middleware, if we use a http protocol to update the road, this will be the method for the request. By default it wil be `GET` because it is the most common, but it can be overwritten to be something else. Again you are not limited to http methods, it fully depends on what an extension sends out via an update event.
-
----
-
-### road.noMatch(middlewareId, [updateType])
-
-```
-road.noMatch('log');
-```
-
-_When no middleware could be found for a current combination of `matchValue` and `updateType`, the `noMatch` middleware will be called, this is handy if you want to return a 404 page or something similar._
-
-**middlewareId:string**  
-Identifier you added by using the `middleware` method. It needs to be a string and should match to a middleware function, otherwise it will throw.
-
-**[updateType:string]**  
-The update type is an extra layer for matching middleware, if we use a http protocol to update the road, this will be the method for the request. By default it wil be `GET` because it is the most common, but it can be overwritten to be something else. Again you are not limited to http methods, it fully depends on what an extension sends out via an update event.
-
----
-
-### road.done(middlewareId, [updateType])
-
-```
-road.done('response', 'post');
-```
-
-_The `done` method is called as the last method in the stack, it is typically used to render output (html or json) to a client_
-
-**middlewareId:string**  
-Identifier you added by using the `middleware` method. It needs to be a string and should match to a middleware function, otherwise it will throw.
-
-**[updateType:string]**  
-The update type is an extra layer for matching middleware, if we use a http protocol to update the road, this will be the method for the request. By default it wil be `GET` because it is the most common, but it can be overwritten to be something else. Again you are not limited to http methods, it fully depends on what an extension sends out via an update event.
+**callbackId:string**  
+Identifier you added by using the `callback` method. It needs to be a string and should match to a callback function, otherwise it will throw.
 
 ---
 
@@ -168,28 +135,25 @@ road.update({ matchValue : '/somepath', updateType : 'post' }, parameterOne, par
 _Manually trigger an update event to the road by calling the `update` method._
 
 **options.matchValue:string**  
-A match value in most webapps can be thought of as an url path, but it is not limited to paths only. Frankly it can be any string you can think of, even a JSON string to match on JSON content. Or in an even more exotic example you can match Raspberry pie sensor outputs via an extension to string values and let that trigger middleware. You can use the `*` as a wildcard to match on all match values that might come in.
+A match value in most webapps can be thought of as an url path, but it is not limited to paths only. Frankly it can be any string you can think of, even a JSON string to match on JSON content. Or in an even more exotic example you can match Raspberry pie sensor outputs via an extension to string values and let that trigger callback. You can use the `*` as a wildcard to match on all match values that might come in.
 
 **options.updateType:string**  
-The update type is an extra layer for matching middleware, if we use a http protocol to update the road, this will be the method for the request. By default it wil be `GET` because it is the most common, but it can be overwritten to be something else. Again you are not limited to http methods, it fully depends on what an extension sends out via an update event.
+The update type is an extra layer for matching callback, if we use a http protocol to update the road, this will be the method for the request. By default it wil be `GET` because it is the most common, but it can be overwritten to be something else. Again you are not limited to http methods, it fully depends on what an extension sends out via an update event.
 
 **parameters:\***  
-Each update can be have custom parameters that will be available as middleware arguments. This could be for example the `request` and `response` object on a router update.
+Each update can be have custom parameters that will be available as callback arguments. This could be for example the `request` and `response` object on a router update.
 
-> Read more about parameters in the [update and middleware stack](https://lagoonroad.com/guide/update-and-middleware-stack) section.
-> Every time a update method is called the middleware that matches will be added to the stack of middleware that needs to be executed. So when calling this on the server you might send out a response and afterwards more middleware will be called. Therefore use it on the client mainly to initialize events. Make sure you fully understand the middelware stack before start using the update function.
+## Road object
+The road object is passed from callback function to callback function.
 
-## Relay object
-The relay object is passed from middleware function to middleware function. There are a couple of properties and methods in this object that cannot be overwritten. If you will try to do so, Lagoon road will throw an error to warn you of naming conflicts.
+### road.parameters:object
+If you are using a parser that supplies you with parameters like `lr-url-parser`, you can access them via `road.parameters`.
 
-### relay.extensions:object
-An Object that has all the registered extensions in it. This way all extensions will not get scattered all over the object.
-
-### relay.parameters:object
-If you are using a parser that supplies you with parameters like `lr-url-parser`, you can access them via `relay.parameters`.
-
-### relay.update(options:object):function
+### road.update(options:object):function
 See update method for usage.
 
-### relay.exit():function
-When you want to prematurely finish the update cycle you have to call the `exit()` function. You want to use this when you want to send a `response.end` before the `done` hook. This function should be used rarely, read more about it in the [stack](https://lagoonroad.com/guide/update-and-middleware-stack) and [static content](https://lagoonroad.com/guide/handling-static-content) guides.
+### road.callbacks:object
+All the callbacks that are assigned.
+
+### other
+There are more properties on the road object, do a dump to see an overview of all properties and methods.
