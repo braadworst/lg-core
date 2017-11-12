@@ -11,8 +11,8 @@ tape('Return object: extension', test => {
   test.end();
 });
 
-tape('Return object: middleware', test => {
-  test.equal(typeof core('client').middleware({ router : () => {} }), 'object');
+tape('Return object: callback', test => {
+  test.equal(typeof core('client').callback('id', () => {}), 'object');
   test.end();
 });
 
@@ -21,17 +21,12 @@ tape('Return object: where', test => {
   test.end();
 });
 
-tape('Return object: error', test => {
-  test.equal(typeof core('client').error('something'), 'object');
+tape('Return object: fail', test => {
+  test.equal(typeof core('client').fail('something'), 'object');
   test.end();
 });
 
-tape('Return object: noMatch', test => {
-  test.equal(typeof core('client').noMatch('something'), 'object');
-  test.end();
-});
-
-tape('Return object: done', test => {
-  test.equal(typeof core('client').done('something'), 'object');
+tape('Return object: update', test => {
+  test.equal(typeof core('client').update({ matchValue : '/' }), 'object');
   test.end();
 });

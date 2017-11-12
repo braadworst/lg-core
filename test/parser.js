@@ -17,9 +17,5 @@ tape('Parsers throws: parsers', test => {
       .parser({ add : () => {}, parse : () => {} })
   }, undefined);
 
-  test.doesNotThrow(() => {
-    core('client', { resetAfterCycle : false })
-  }, undefined);
-
   test.end();
 });
