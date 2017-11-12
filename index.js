@@ -17,10 +17,10 @@ module.exports = (executingEnvironment) => {
     runners        : [],
   };
 
-  function extension(id, extension, isUpdater = false) {
+  function extension(id, extension) {
     check.assert.nonEmptyString(id, 'Extension id should be a non empty string');
     check.assert.not.assigned(exposed[id], `"${ id }" has already been defined as an extension`);
-    exposed[id] = isUpdater ? extension(update) : extension;
+    exposed[id] = extension;
     return exposed;
   }
 
@@ -117,7 +117,7 @@ module.exports = (executingEnvironment) => {
     // Execute the functions
     try {
       for (let i = 0; i < callbacks.length; i++) {
-        let response = await callbacks[i](exposed);
+        let response = await callbacks[i](exposed, ...parameters);
         if (typeof response === 'object') {
           exposed = Object.assign({}, exposed, response);
         }

@@ -1,13 +1,13 @@
 # lr-main reference
 
-## Changelog in v2.0.0
+## Changelog in v2.0.1
 - Simplified code and usage, reduced package by almost 90% to 1.3KB
 - Parallel processing, speeding up and non blocking
 - Removed the complete next callback, working with returns
 - Simpler interface, no more relay, you have control over the complete road at runtime
 - Dynamic assignment of callbacks (previously middleware) is now possible
 - Extensions are not so deeply nested anymore
--
+- Removed the updateable extensions, now just pass in the road object to an extension
 
 The _lr-main_ package is the only mandatory package for Lagoon road. This package connects everything together, regardless of environment.
 
@@ -42,7 +42,7 @@ The parser that you want to use to parse an incoming matchValue. It expects two 
 
 ---
 
-### road.extension(extensionId, extension, [isUpdater])
+### road.extension(extensionId, extension)
 ```
 road.extension('router', router, true);
 ```
@@ -51,9 +51,6 @@ A unique id to identify the extension.
 
 **extension:\***  
 The actual extension, this can be any type of code that you want to use
-
-**[isUpdater:boolean = false]**  
-Tell the core if on initialization the extension needs to be executed. This is typically for extensions that use update events to trigger updates to the road. Read more about [extensions](https://lagoonroad.com/guide/writing-extensions) in the guide.
 
 > Extensions are available on the road object in the callback
 > ```

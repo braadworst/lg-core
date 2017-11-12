@@ -21,14 +21,6 @@ tape('Datatypes invalid throws: extension', test => {
   test.end();
 });
 
-tape('Extension with update', test => {
-  const road      = core('client');
-  const extension = () => { return () => { return true } };
-  road.extension('updater', extension, true);
-  test.equal(road.updater(), true);
-  test.end();
-});
-
 tape('Datatypes invalid throws: callback', test => {
   datatypes
     .forEach(datatype => {

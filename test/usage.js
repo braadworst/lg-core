@@ -123,3 +123,15 @@ tape('Callback matching: Async error', test => {
     .fail('error')
     .update({ matchValue : '/' })
 });
+
+tape('Passing third party params', test => {
+  const done = (road, param) => {
+    test.equal(param, true);
+    test.end();
+  };
+
+  core('webserver')
+    .callback('done', done)
+    .run('/', 'done')
+    .update({ matchValue : '/' }, true)
+});
