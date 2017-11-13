@@ -96,7 +96,6 @@ module.exports = (executingEnvironment) => {
     if (!hasInverse) {
       matches = exposed.runners
         .filter(runner => {
-          console.log(runner.updateType, updateType);
           if (runner.updateType === updateType) {
             if (runner.matchValue === '*') {
               return true;
