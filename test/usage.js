@@ -15,30 +15,13 @@ tape('Adding unknown environment', test => {
     .update({ matchValue: '/' });
 });
 
-tape('Callback matching: wildcard', test => {
-  const done = road => {
-    test.equal(road.wildcard, true);
-    test.end();
-  };
-  const wildcard = road => {
-    return { wildcard : true };
-  };
-
-  core('webserver')
-    .callback('done', done)
-    .callback('wildcard', wildcard)
-    .run('*', 'wildcard')
-    .run('/', 'done')
-    .update({ matchValue : '/' });
-});
-
 tape('Callback matching: updateType', test => {
   const done = road => {
     test.equal(road.custom, true);
     test.end();
   };
   const custom = road => {
-    return { custom : true };
+    road.custom = true;
   };
 
   core('webserver')
@@ -49,32 +32,30 @@ tape('Callback matching: updateType', test => {
     .update({ matchValue : '/', updateType : 'hello' });
 });
 
-tape('Callback matching: minus', test => {
+tape('Callback matching', async function(test) {
   const done = road => {
-    test.equal(road.yes, true);
-    test.equal(road.no, true);
-    test.equal(road.not, undefined );
+    test.equal(road.count, 1);
     test.end();
   };
-  const yes = road => {
-    return { yes : true };
-  };
-  const no = road => {
-    return { no : true };
-  };
-  const not = road => {
-    return { not : true };
+
+  const count = road => {
+    road.count = road.count !== undefined ? road.count + 1 : 0;
   };
 
-  core('webserver')
+  const instance = core('webserver')
     .callback('done', done)
-    .callback('yes', yes)
-    .callback('no', no)
-    .run('/yes', 'yes')
-    .run('/not', 'not')
-    .run('-/', 'no')
-    .run('/yes', 'done')
-    .update({ matchValue : '/yes' });
+    .callback('count', count)
+    .run('*', 'count')
+    .run('-/', 'count')
+    .run('-/count', 'count')
+    .run('/count', 'count')
+    .run('/done', 'count')
+    .run('/done', 'done');
+
+  await instance.update({ matchValue : '/' });
+  await instance.update({ matchValue : '/count' });
+  await instance.update({ matchValue : '/other' });
+  await instance.update({ matchValue : '/done' });
 });
 
 tape('Callback matching: no match', test => {
@@ -139,13 +120,13 @@ tape('Passing third party params', test => {
 tape('Exit loop', async function(test) {
 
   const one = road => {
-    return { one : true };
+    road.one = true;
   };
   const two = road => {
     return 'exit';
   };
   const three = road => {
-    return { three : true };
+    road.three = true;
   };
 
   let temp = await core('webserver')

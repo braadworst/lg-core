@@ -12,13 +12,13 @@ tape('Testing long stack', test => {
       });
     }
     await waiter();
-    return { one : true };
+    road.one = true;
   }
   const two = async function(road) {
-    return { two : true };
+    road.two = true;
   }
   const three = async function(road) {
-    return { three : true };
+    road.three = true;
   }
   const done = road => {
     test.equal(road.one, true);

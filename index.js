@@ -86,20 +86,35 @@ module.exports = (executingEnvironment) => {
     // Get update type
     const updateType   = options.updateType ? options.updateType : defaultUpdateType;
 
-    // Get all the matches
-    let matches = exposed.runners.filter(runner => {
-      // Wildcard
-      if (runner.matchValue === '*' && runner.updateType === updateType) {
-        return true;
-      // Actual match
-      } else if (runner.matchValue === matchValue && runner.updateType === updateType) {
-        return true;
-      // When a minus as prefix, match everything except the matchValue given
-      } else if (runner.matchValue[0] === '-' && runner.matchValue.substring(1) !== matchValue && runner.updateType === updateType) {
-        return true;
-      }
-      return false;
-    });
+    const hasInverse = exposed.runners
+        .filter(runner => runner.matchValue[0] === '-')
+        .filter(runner => runner.matchValue.substring(1) === matchValue)
+        .length > 0;
+
+    let matches = [];
+
+    if (!hasInverse) {
+      matches = exposed.runners
+        .filter(runner => {
+          console.log(runner.updateType, updateType);
+          if (runner.updateType === updateType) {
+            if (runner.matchValue === '*') {
+              return true;
+            } else if (runner.matchValue === matchValue) {
+              return true;
+            }
+          }
+          return  false;
+        })
+        // Dedupe
+        .reduce((output, runner) => {
+          output[runner.callbackId] = runner;
+          return output;
+        }, {});
+
+      // Back to array
+      matches = Object.values(matches);
+    }
 
     // No matches
     if (matches.length === 0) {
@@ -120,8 +135,6 @@ module.exports = (executingEnvironment) => {
         let response = await callbacks[i](exposed, ...parameters);
         if (response === 'exit') {
           break;
-        } else if (typeof response === 'object') {
-          exposed = Object.assign({}, exposed, response);
         }
       }
     } catch (error) {
