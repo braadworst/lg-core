@@ -1,6 +1,8 @@
+const debug = require('debug')('lr-main');
 const check = require('check-types');
 
 module.exports = (executingEnvironment) => {
+  debug('Init');
   check.assert.nonEmptyString(executingEnvironment, 'Environment id should be a non empty string');
   const defaultUpdateType     = 'GET';
   let exposed               = {
@@ -20,6 +22,7 @@ module.exports = (executingEnvironment) => {
   function extension(id, extension) {
     check.assert.nonEmptyString(id, 'Extension id should be a non empty string');
     check.assert.not.assigned(exposed[id], `"${ id }" has already been defined as an extension`);
+    debug(`Adding extension ${ id }`);
     exposed[id] = extension;
     return exposed;
   }
@@ -27,6 +30,7 @@ module.exports = (executingEnvironment) => {
   function callback(id, newCallback) {
     check.assert.nonEmptyString(id, 'Callback id should be a non empty string');
     check.assert.function(newCallback, `"${ id }" callback is not a function`);
+    debug(`Adding callback ${ id }`);
     exposed.callbacks[id] = {
       environments : exposed.environments,
       callback     : newCallback
@@ -39,6 +43,7 @@ module.exports = (executingEnvironment) => {
     newEnvironments.forEach(id => {
       check.assert.nonEmptyString(id, 'Environment id should be a non empty string');
     });
+    debug(`Switching environment context ${ newEnvironments }`);
     exposed.environments = newEnvironments;
     return exposed;
   }
@@ -46,6 +51,7 @@ module.exports = (executingEnvironment) => {
   function parser(parser) {
     check.assert.function(parser.add, 'Parser needs to have a method called "add"');
     check.assert.function(parser.parse, 'Parser needs to have a method called "parse"');
+    debug('Added new parser');
     exposed.selectedParser = parser;
     return exposed;
   }
@@ -54,6 +60,7 @@ module.exports = (executingEnvironment) => {
     check.assert.nonEmptyString(matchValue, 'Match value should be a non empty string');
     check.assert.nonEmptyString(callbackId, 'Callback id should be a non empty string');
     check.assert.nonEmptyString(updateType, 'Update type should be a non empty string');
+    debug(`Adding run for ${ matchValue } and callback ${ callbackId }`);
     exposed.selectedParser.add(matchValue);
     exposed.runners.push({ matchValue, callbackId, updateType });
     return exposed;
@@ -61,6 +68,7 @@ module.exports = (executingEnvironment) => {
 
   function fail(callbackId) {
     check.assert.nonEmptyString(callbackId, 'Callback id should be a non empty string');
+    debug(`Adding fail callback ${ callbackId }`);
     exposed.fail = callbackId;
     return exposed;
   }
@@ -76,8 +84,6 @@ module.exports = (executingEnvironment) => {
   }
 
   async function update(options, ...parameters) {
-    check.assert.assigned(options.matchValue, 'Update function cannot find a matchValue');
-
     // Get match value
     const mapping      = exposed.selectedParser.parse(options.matchValue);
     const matchValue   = mapping.path;
@@ -85,6 +91,10 @@ module.exports = (executingEnvironment) => {
 
     // Get update type
     const updateType   = options.updateType ? options.updateType : defaultUpdateType;
+
+    check.assert.assigned(options.matchValue, 'Update function cannot find a matchValue');
+
+    debug(`Running update for updateType: ${ updateType } and matchValue: ${ matchValue }`);
 
     // Only runners in the executing environment
     let matches = [];
@@ -126,13 +136,15 @@ module.exports = (executingEnvironment) => {
 
     // No matches
     if (matches.length === 0) {
-      await failing(new Error(`No callback found for ${ matchValue }`));
+      debug(`No match found for updateType: ${ updateType } and matchValue: ${ matchValue }`);
+      return exposed;
     }
 
     // Execute the functions
     let local = {};
     try {
       for (let i = 0; i < matches.length; i++) {
+        debug(`Executing callback ${ matches[i].callbackId }`);
         let response = await matches[i].callback(exposed, local, ...parameters);
         if (response === 'exit') {
           break;
@@ -141,6 +153,7 @@ module.exports = (executingEnvironment) => {
         }
       }
     } catch (error) {
+      debug(error);
       console.error(error);
       await failing(error);
     }

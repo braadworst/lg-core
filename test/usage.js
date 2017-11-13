@@ -65,18 +65,6 @@ tape('Callback matching', async function(test) {
   await instance.update({ matchValue : '/done' });
 });
 
-tape('Callback matching: no match', test => {
-  const noMatch = road => {
-    test.equal(true, true);
-    test.end();
-  };
-
-  core('webserver')
-    .callback('noMatch', noMatch)
-    .fail('noMatch')
-    .update({ matchValue : '/' });
-});
-
 tape('Callback matching: error', test => {
   const error = road => {
     test.equal(true, true);
