@@ -35,6 +35,7 @@ tape('Callback matching: updateType', test => {
 tape('Callback matching', async function(test) {
   const done = road => {
     test.equal(road.count, 1);
+    test.equal(road.other, true);
     test.end();
   };
 
@@ -42,11 +43,17 @@ tape('Callback matching', async function(test) {
     road.count = road.count !== undefined ? road.count + 1 : 0;
   };
 
+  const other = road => {
+    road.other = true;
+  };
+
   const instance = core('webserver')
     .callback('done', done)
     .callback('count', count)
+    .callback('other', other)
     .run('*', 'count')
     .run('-/', 'count')
+    .run('/', 'other')
     .run('-/count', 'count')
     .run('/count', 'count')
     .run('/done', 'count')
@@ -106,7 +113,7 @@ tape('Callback matching: Async error', test => {
 });
 
 tape('Passing third party params', test => {
-  const done = (road, param) => {
+  const done = (road, local, param) => {
     test.equal(param, true);
     test.end();
   };

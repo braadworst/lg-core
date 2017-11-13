@@ -86,54 +86,58 @@ module.exports = (executingEnvironment) => {
     // Get update type
     const updateType   = options.updateType ? options.updateType : defaultUpdateType;
 
-    const hasInverse = exposed.runners
-        .filter(runner => runner.matchValue[0] === '-')
-        .filter(runner => runner.matchValue.substring(1) === matchValue)
-        .length > 0;
-
+    // Only runners in the executing environment
     let matches = [];
+    matches = exposed.runners
+      .filter(match => {
+        return exposed.callbacks[match.callbackId]
+          && exposed.callbacks[match.callbackId].environments.indexOf(executingEnvironment) > -1;
+      });
 
-    if (!hasInverse) {
-      matches = exposed.runners
-        .filter(runner => {
-          if (runner.updateType === updateType) {
-            if (runner.matchValue === '*') {
-              return true;
-            } else if (runner.matchValue === matchValue) {
-              return true;
-            }
-          }
-          return  false;
-        })
-        // Dedupe
-        .reduce((output, runner) => {
-          output[runner.callbackId] = runner;
-          return output;
-        }, {});
+    // Filter with the same updateType
+    matches = matches.filter(runner => runner.updateType === updateType);
 
-      // Back to array
-      matches = Object.values(matches);
-    }
+    // Get all the minus matchValues for later
+    const excepts = exposed.runners
+      .filter(runner => runner.matchValue[0] === '-')
+      .filter(runner => runner.matchValue.substring(1) === matchValue)
+
+    // Filter wildard runners and exact match
+    matches = matches.filter(runner => runner.matchValue === '*' || runner.matchValue === matchValue);
+
+    // Remove doubles
+    matches = matches.reduce((output, runner) => {
+      output[runner.callbackId] = runner;
+      return output;
+    }, {});
+    matches = Object.values(matches); // Back to array
+
+    // Remove all the ones that have a minus matchValue and have the same
+    // callback id as the minus matchValue
+    matches = matches.filter(runner => {
+      return excepts.filter(except => except.callbackId === runner.callbackId).length === 0;
+    })
+
+    // Add callback to the runners
+    matches.map(match => {
+      match.callback = exposed.callbacks[match.callbackId].callback;
+      return match;
+    });
 
     // No matches
     if (matches.length === 0) {
       await failing(new Error(`No callback found for ${ matchValue }`));
     }
 
-    // Get callbacks based on matches
-    let callbacks = matches.filter(match => {
-      return exposed.callbacks[match.callbackId]
-        && exposed.callbacks[match.callbackId].environments.indexOf(executingEnvironment) > -1;
-    }).map(match => {
-      return exposed.callbacks[match.callbackId].callback;
-    });
-
     // Execute the functions
+    let local = {};
     try {
-      for (let i = 0; i < callbacks.length; i++) {
-        let response = await callbacks[i](exposed, ...parameters);
+      for (let i = 0; i < matches.length; i++) {
+        let response = await matches[i].callback(exposed, local, ...parameters);
         if (response === 'exit') {
           break;
+        } else if (typeof response === 'object') {
+          local = Object.assign({}, local, response);
         }
       }
     } catch (error) {
