@@ -88,6 +88,7 @@ module.exports = (executingEnvironment) => {
     const mapping      = exposed.selectedParser.parse(options.matchValue);
     const matchValue   = mapping.path;
     exposed.parameters = mapping.parameters;
+    exposed.path       = mapping.path;
 
     // Get update type
     const updateType   = options.updateType ? options.updateType : defaultUpdateType;
