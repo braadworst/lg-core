@@ -6,7 +6,6 @@ module.exports = (executingEnvironment) => {
   check.assert.nonEmptyString(executingEnvironment, 'Environment id should be a non empty string');
   const defaultUpdateType     = 'GET';
   let exposed               = {
-    extension,
     callback,
     where,
     fail,
@@ -17,15 +16,8 @@ module.exports = (executingEnvironment) => {
     environments   : [executingEnvironment],
     callbacks      : {},
     runners        : [],
+    failCallbackId : false
   };
-
-  function extension(id, extension) {
-    check.assert.nonEmptyString(id, 'Extension id should be a non empty string');
-    check.assert.not.assigned(exposed[id], `"${ id }" has already been defined as an extension`);
-    debug(`Adding extension ${ id }`);
-    exposed[id] = extension;
-    return exposed;
-  }
 
   function callback(id, newCallback) {
     check.assert.nonEmptyString(id, 'Callback id should be a non empty string');
@@ -66,36 +58,31 @@ module.exports = (executingEnvironment) => {
     return exposed;
   }
 
-  function fail(callbackId) {
-    check.assert.nonEmptyString(callbackId, 'Callback id should be a non empty string');
-    debug(`Adding fail callback ${ callbackId }`);
-    exposed.fail = callbackId;
+  function fail(id) {
+    check.assert.nonEmptyString(id, 'Callback id should be a non empty string');
+    debug(`Adding fail callback ${ id }`);
+    exposed.failCallbackId = id;
     return exposed;
   }
 
-  async function failing(error) {
+  async function failing(error, parameters) {
     if (
-      exposed.fail &&
-      exposed.callbacks[exposed.fail] &&
-      exposed.callbacks[exposed.fail].environments.indexOf(executingEnvironment) > -1) {
+      exposed.failCallbackId &&
+      exposed.callbacks[exposed.failCallbackId] &&
+      exposed.callbacks[exposed.failCallbackId].environments.indexOf(executingEnvironment) > -1) {
       exposed.error = error;
-      await exposed.callbacks[exposed.fail].callback(exposed);
+      await exposed.callbacks[exposed.failCallbackId].callback(exposed, ...parameters);
     }
   }
 
-  async function update(options, ...parameters) {
-    // Get match value
-    const mapping      = exposed.selectedParser.parse(options.matchValue);
-    const matchValue   = mapping.path;
-    exposed.parameters = mapping.parameters;
-    exposed.path       = mapping.path;
-
-    // Get update type
-    const updateType   = options.updateType ? options.updateType : defaultUpdateType;
-
+  async function update(matchValue, updateType = defaultUpdateType, ...parameters) {
     check.assert.assigned(options.matchValue, 'Update function cannot find a matchValue');
-
     debug(`Running update for updateType: ${ updateType } and matchValue: ${ matchValue }`);
+
+    // Get match value
+    const mapping = exposed.selectedParser.parse(matchValue);
+    matchValue    = mapping.path;
+    exposed.path  = mapping.path;
 
     // Only runners in the executing environment
     let matches = [];
@@ -156,7 +143,7 @@ module.exports = (executingEnvironment) => {
     } catch (error) {
       debug(error);
       console.error(error);
-      await failing(error);
+      await failing(error, parameters);
     }
 
     return exposed;
